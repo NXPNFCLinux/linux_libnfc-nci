@@ -1,0 +1,4 @@
+var searchData=
+[
+  ['power_5fstate',['power_state',['../structnfc__btoob__pairing__t.html#aecc2447ff2bc8675c9899a9347dc689d',1,'nfc_btoob_pairing_t::power_state()'],['../structnfc__wifi__pairing__t.html#ac66cfb068c42e4abc29d455f6db14faa',1,'nfc_wifi_pairing_t::power_state()']]]
+];

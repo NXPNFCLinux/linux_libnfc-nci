@@ -1,0 +1,116 @@
+/******************************************************************************
+ *
+ *  Copyright (C) 2015 NXP Semiconductors
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License")
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ ******************************************************************************/
+
+#ifndef __NATIVE_NFCMANAGER_TAG__H__
+#define __NATIVE_NFCMANAGER_TAG__H__
+
+#include "data_types.h"
+#include "linux_nfc_api.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*******************************************************************************
+**
+** Function:        isNfcActive
+**
+** Description:     Used externaly to determine if NFC is active or not.
+**
+** Returns:         'true' if the NFC stack is running, else 'false'.
+**
+*******************************************************************************/
+BOOLEAN nativeNfcManager_isNfcActive();
+
+/*******************************************************************************
+**
+** Function:        nfcManager_doInitialize
+**
+** Description:     Turn on NFC.
+**                  e: JVM environment.
+**                  o: Java object.
+**
+** Returns:         True if ok.
+**
+*******************************************************************************/
+INT32 nativeNfcManager_doInitialize ();
+
+
+/*******************************************************************************
+**
+** Function:        nfcManager_doDeinitialize
+**
+** Description:     Turn off NFC.
+**
+** Returns:         0 if ok.
+**
+*******************************************************************************/
+INT32 nativeNfcManager_doDeinitialize ();
+
+
+/*******************************************************************************
+**
+** Function:        nfcManager_enableDiscovery
+**
+** Description:     Start polling and listening for devices.
+**                  e: JVM environment.
+**                  o: Java object.
+**                  technologies_mask: the bitmask of technologies for which to enable discovery
+**                  enable_lptd: whether to enable low power polling (default: false)
+**
+** Returns:         None
+**
+*******************************************************************************/
+void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
+    BOOLEAN reader_mode, BOOLEAN enable_host_routing, BOOLEAN restart);
+
+
+/*******************************************************************************
+**
+** Function:        nfcManager_disableDiscovery
+**
+** Description:     Stop polling and listening for devices.
+**
+** Returns:         None
+**
+*******************************************************************************/
+void nativeNfcManager_disableDiscovery ();
+
+void nativeNfcManager_registerTagCallback(nfcTagCallback_t *nfcTagCb);
+
+void nativeNfcManager_deregisterTagCallback();
+
+void nativeNfcManager_registerHostCallback(nfcHostCardEmulationCallback_t *callback);
+void nativeNfcManager_deregisterHostCallback();
+    
+/*******************************************************************************
+**
+** Function:        nativeNfcManager_sendRawFrame
+**
+** Description:     Send a raw frame.
+**
+** Returns:         True if ok.
+**
+*******************************************************************************/
+INT32 nativeNfcManager_sendRawFrame (UINT8 *buf, UINT32 bufLen);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // __NATIVE_NFCMANAGER_TAG__H__
