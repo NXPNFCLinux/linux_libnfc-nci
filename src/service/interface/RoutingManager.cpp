@@ -68,6 +68,7 @@ RoutingManager::RoutingManager ()
   mDefaultEe(ROUTE_HOST),
   mHostListnEnable (true),
   mFwdFuntnEnable (true),
+  mSkipCheckNDEF (true),
   mCallback(NULL)
 {
     NXPLOG_API_D("%s: default route is 0x%02X\n",
@@ -151,10 +152,11 @@ RoutingManager& RoutingManager::getInstance ()
     return manager;
 }
 
-void RoutingManager::enableRoutingToHost()
+void RoutingManager::enableRoutingToHost(bool skipCheckNDEF)
 {
     tNFA_STATUS nfaStat;
     NXPLOG_API_D ("%s enter", "RoutingManager::enableRoutingToHost()");
+    mSkipCheckNDEF = skipCheckNDEF;
     {
         SyncEventGuard guard (mRoutingEvent);
 
@@ -220,7 +222,7 @@ void RoutingManager::notifyHceActivated()
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if (mCallback)
+        if (mCallback && (NULL != mCallback->onHostCardEmulationActivated))
         {
             mCallback->onHostCardEmulationActivated();
         }
@@ -231,7 +233,7 @@ void RoutingManager::notifyHceDeactivated()
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if (mCallback)
+        if (mCallback && (NULL != mCallback->onHostCardEmulationDeactivated))
         {
             mCallback->onHostCardEmulationDeactivated();
         }
@@ -265,7 +267,8 @@ void RoutingManager::handleData (const UINT8* data, UINT32 dataLen, tNFA_STATUS 
         NXPLOG_API_E("RoutingManager::handleData: read data fail");
         goto TheEnd;
     }
-    if (mRxDataBufferLen == T4T_CHECK_NDEF_APDU_LENGTH && memcmp(mRxDataBuffer, T4T_CHECK_NDEF_APDU, T4T_CHECK_NDEF_APDU_LENGTH) == 0)
+    if (mSkipCheckNDEF
+            && mRxDataBufferLen == T4T_CHECK_NDEF_APDU_LENGTH && memcmp(mRxDataBuffer, T4T_CHECK_NDEF_APDU, T4T_CHECK_NDEF_APDU_LENGTH) == 0)
     {
         //ignore check Ndef command, interop with PN544
         nfaStat = NFA_Deactivate (FALSE);
@@ -277,7 +280,7 @@ void RoutingManager::handleData (const UINT8* data, UINT32 dataLen, tNFA_STATUS 
     }
     if (nativeNfcManager_isNfcActive())
     {
-        if (mCallback)
+        if (mCallback && (NULL != mCallback->onDataReceived))
         {
             mCallback->onDataReceived(mRxDataBuffer, mRxDataBufferLen);
         }

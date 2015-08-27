@@ -665,6 +665,7 @@ void NfcTag::createNativeNfcTag (tNFA_ACTIVATED& activationData)
 
     tag.technology = mTechList [mNumTechList -1];
     tag.handle = mTechHandles[0];
+    tag.protocol = mTechLibNfcTypes[0];
     setNfcTagUid(tag, activationData);
 
     //notify app about this new tag

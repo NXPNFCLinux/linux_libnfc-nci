@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['key',['key',['../structnfc__wifi__pairing__t.html#a74640c5faed8fa7cc73dd72f3a59d4d7',1,'nfc_wifi_pairing_t']]],
-  ['key_5flength',['key_length',['../structnfc__wifi__pairing__t.html#aa045f1d547271bf0e09da158f306488f',1,'nfc_wifi_pairing_t']]]
+  ['is_5fndef',['is_ndef',['../structndef__info__t.html#a210aa7d6be8d2488af3c32a6f1882953',1,'ndef_info_t']]],
+  ['is_5fwritable',['is_writable',['../structndef__info__t.html#a181e9b302e56bfd9fb2d3d7373fee5a9',1,'ndef_info_t']]]
 ];

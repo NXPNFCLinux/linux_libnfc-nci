@@ -72,6 +72,26 @@ extern "C" {
 /** Unchanged (type len =0) */
 #define NDEF_TNF_UNCHANGED      6
 
+/* Supported Protocols */
+#define NFA_PROTOCOL_UNKNOWN            0x00
+#define NFA_PROTOCOL_T1T                0x01
+#define NFA_PROTOCOL_T2T                0x02
+#define NFA_PROTOCOL_T3T                0x03
+#define NFA_PROTOCOL_ISO_DEP            0x04
+#define NFA_PROTOCOL_15693              0x06
+#define NFA_PROTOCOL_MIFARE             0x80
+typedef unsigned char tNFC_PROTOCOL;
+
+/**
+ *  \brief setting this flag allows host application ignore
+ *  an NDEF check command from reader
+ */
+#define FLAG_HCE_SKIP_NDEF_CHECK    0x80
+/**
+ *  \brief setting this flag allows host application enable HCE
+ */
+#define FLAG_HCE_ENABLE_HCE         0x01
+
 /**
  *  \brief friendly NDEF Type Name
  */
@@ -159,6 +179,10 @@ typedef struct
      *  \brief the uid length
      */
     unsigned int uid_length;
+    /**
+     *  \brief activated protocol
+     */
+    tNFC_PROTOCOL protocol;
 }nfc_tag_info_t;
 
 /**
@@ -319,7 +343,7 @@ typedef struct {
     /**
      * \brief NFC Tag callback function when tag is removed.
      */
-    void (*onTagDepature) (void);
+    void (*onTagDeparture) (void);
 }nfcTagCallback_t;
 
 /**
@@ -334,7 +358,7 @@ typedef struct {
     /**
      * \brief NFC Peer Device callback function when device is removed.
      */
-    void (*onDeviceDepature) (void);
+    void (*onDeviceDeparture) (void);
 
     /**
      * \brief NFC Peer Device callback function when NDEF message is received from peer device.
@@ -356,7 +380,7 @@ typedef struct {
     /**
      * \brief NFC Peer Device callback function when device is removed.
      */
-    void (*onDeviceDepature) (void);
+    void (*onDeviceDeparture) (void);
 }nfcSnepClientCallback_t;
 
 /**

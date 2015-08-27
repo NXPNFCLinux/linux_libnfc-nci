@@ -433,7 +433,7 @@ static BOOLEAN switchRfInterface (tNFA_INTF_TYPE rfInterface)
 
     if (natTag.mTechLibNfcTypes[handle] != NFC_PROTOCOL_ISO_DEP)
     {
-        NXPLOG_API_D ("%s: protocol: %d not ISO_DEP, do nothing", __FUNCTION__, natTag.mTechLibNfcTypes[0]);
+        NXPLOG_API_D ("%s: protocol: %d not ISO_DEP, do nothing", __FUNCTION__, natTag.mTechLibNfcTypes[handle]);
         return TRUE;
     }
 
@@ -475,9 +475,9 @@ static void *presenceCheckThread(void *arg)
     doDisconnect ();
     if(!NfcTag::getInstance().mNfcDisableinProgress)
     {
-        if(gTagCallback)
+        if(gTagCallback && (NULL != gTagCallback->onTagDeparture))
         {
-            gTagCallback->onTagDepature();
+            gTagCallback->onTagDeparture();
         }
     }
     NXPLOG_API_D ("%s: exit", __FUNCTION__);
@@ -499,7 +499,11 @@ static BOOLEAN doDisconnect ()
     NXPLOG_API_D ("%s: enter", __FUNCTION__);
     tNFA_STATUS nfaStat = NFA_STATUS_OK;
 
-    //NfcTag::getInstance().resetAllTransceiveTimeouts ();
+    //reset Ndef states
+    sCheckNdefMaxSize = 0;
+    sCheckNdefCurrentSize = 0;
+    sCheckNdefCardReadOnly = FALSE;
+    sCheckNdefCapable = FALSE;
 
     if (NfcTag::getInstance ().getActivationState () != NfcTag::Active)
     {
@@ -652,7 +656,7 @@ static BOOLEAN doPresenceCheck ()
     }
 
 #if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-    if(NfcTag::getInstance ().mTechLibNfcTypes[0] == NFA_PROTOCOL_T3BT)
+    if(NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_T3BT)
     {
         UINT8 *pbuf = NULL;
         UINT8 bufLen = 0x00;
@@ -684,7 +688,7 @@ static BOOLEAN doPresenceCheck ()
     }
 #endif
 
-    if (NfcTag::getInstance ().mTechLibNfcTypes[0] == NFA_PROTOCOL_MIFARE)
+    if (NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_MIFARE)
     {
         NXPLOG_API_E ("Calling EXTNS_MfcPresenceCheck");
         status = EXTNS_MfcPresenceCheck();
@@ -1349,7 +1353,7 @@ void nativeNfcTag_onTagArrival(nfc_tag_info_t *tag)
     sCurrentConnectedTargetType = tag->technology;
     if(!NfcTag::getInstance().mNfcDisableinProgress)
     {
-        if(gTagCallback)
+        if(gTagCallback && (NULL != gTagCallback->onTagArrival))
         {
             NXPLOG_API_D ("%s: notify tag is ready", __FUNCTION__);
             gTagCallback->onTagArrival(tag);
@@ -1394,7 +1398,7 @@ void nativeNfcTag_onTagArrival(nfc_tag_info_t *tag)
 BOOLEAN nativeNfcTag_checkNdef(UINT32 tagHandle, ndef_info_t *info)
 {
     tNFA_STATUS status = NFA_STATUS_FAILED;
-
+    sIsCheckingNDef = TRUE;
     NXPLOG_API_D ("%s: enter; handle=%x", __FUNCTION__, tagHandle);
 
     if (tagHandle != sCurrentConnectedHandle)
@@ -1403,7 +1407,7 @@ BOOLEAN nativeNfcTag_checkNdef(UINT32 tagHandle, ndef_info_t *info)
         return FALSE;
     }
 #if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-    if (NfcTag::getInstance ().mTechLibNfcTypes[0] == NFA_PROTOCOL_T3BT)
+    if (NfcTag::getInstance ().mTechLibNfcTypes[tagHandle] == NFA_PROTOCOL_T3BT)
     {
         sIsCheckingNDef = FALSE;
         return FALSE;
@@ -1424,7 +1428,6 @@ BOOLEAN nativeNfcTag_checkNdef(UINT32 tagHandle, ndef_info_t *info)
         gSyncMutex.unlock();
         return FALSE;
     }
-    sIsCheckingNDef = TRUE;
 
     if (info != NULL)
     {
@@ -1639,7 +1642,7 @@ End:
 ** Description:     Write a NDEF message to the tag.
 **                  buf: Contains a NDEF message.
 **
-** Returns:         True if ok.
+** Returns:         0 if ok.
 **
 *******************************************************************************/
 INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength/*ndef message*/)
@@ -1657,7 +1660,7 @@ INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength
         NXPLOG_API_E ("%s: Wrong tag handle!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
-    if (sCheckNdefMaxSize < dataLength)
+    if (sCheckNdefCapable && sCheckNdefMaxSize < dataLength)
     {
         NXPLOG_API_E ("%s: NDEF message is too large!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
@@ -1733,7 +1736,7 @@ INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength
         NDEF_MsgInit (buffer, maxBufferSize, &curDataSize);
         status = NDEF_MsgAddRec (buffer, maxBufferSize, &curDataSize, NDEF_TNF_EMPTY, NULL, 0, NULL, 0, NULL, 0);
         NXPLOG_API_D ("%s: create empty ndef msg; status=%u; size=%lu", __FUNCTION__, status, curDataSize);
-        if (NfcTag::getInstance ().mTechLibNfcTypes[0] == NFA_PROTOCOL_MIFARE)
+        if (NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_MIFARE)
         {
             status = EXTNS_MfcWriteNDef(buffer, (uint32_t)curDataSize);
         }
@@ -1781,7 +1784,8 @@ TheEnd:
     sWriteWaitingForComplete = FALSE;
     gSyncMutex.unlock();
     NXPLOG_API_D ("%s: exit; result=%d", __FUNCTION__, result);
-    return result;
+
+    return result ? 0 : -1;
 }
 
 /*******************************************************************************
@@ -2124,7 +2128,7 @@ INT32 nativeNfcTag_doTransceive (UINT32 handle, UINT8* txBuffer, INT32 txBufferL
     if (!nativeNfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
-        gSyncMutex.lock();
+        gSyncMutex.unlock();
         return 0;
     }
     if (sRxDataBuffer != NULL)

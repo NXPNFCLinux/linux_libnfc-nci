@@ -59,7 +59,7 @@ static void nativeNfcHandover_notifyHrRecieved(UINT8 *data, UINT32 length)
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if(sCallback)
+        if(sCallback && (NULL != sCallback->onHandoverRequestReceived))
         {
             sCallback->onHandoverRequestReceived(data, length);
         }
@@ -70,7 +70,7 @@ static void nativeNfcHandover_notifyHsRecieved(UINT8 *data, UINT32 length)
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if(sCallback)
+        if(sCallback && (NULL != sCallback->onHandoverSelectReceived))
         {
             sCallback->onHandoverSelectReceived(data, length);
         }

@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['linux_5fnfc_5fapi_2eh',['linux_nfc_api.h',['../linux__nfc__api_8h.html',1,'']]],
-  ['linux_5fnfc_5ffactory_5fapi_2eh',['linux_nfc_factory_api.h',['../linux__nfc__factory__api_8h.html',1,'']]]
+  ['key',['key',['../structnfc__wifi__pairing__t.html#a74640c5faed8fa7cc73dd72f3a59d4d7',1,'nfc_wifi_pairing_t']]],
+  ['key_5flength',['key_length',['../structnfc__wifi__pairing__t.html#aa045f1d547271bf0e09da158f306488f',1,'nfc_wifi_pairing_t']]]
 ];

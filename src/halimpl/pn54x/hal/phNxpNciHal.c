@@ -555,6 +555,19 @@ force_download:
             if (status != NFCSTATUS_SUCCESS)
             {
                 NXPLOG_NCIHAL_E ("FW Download failed - NFCC init will continue");
+                /* call read pending */
+                status = phTmlNfc_Read(
+                nxpncihal_ctrl.p_cmd_data,
+                NCI_MAX_DATA_LEN,
+                   (pphTmlNfc_TransactCompletionCb_t) &phNxpNciHal_read_complete,
+                        NULL);
+                if (status != NFCSTATUS_PENDING)
+                {
+                    NXPLOG_NCIHAL_E("TML Read status error status = %x", status);
+                    wConfigStatus = phTmlNfc_Shutdown();
+                    wConfigStatus = NFCSTATUS_FAILED;
+                    goto clean_and_return;
+                }
             }
             else
             {

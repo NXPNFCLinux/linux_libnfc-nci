@@ -46,7 +46,11 @@ typedef enum {
 	SNEP_SERVER_STARTED,
 }SNEP_SERVER_STATE;
 
+#ifdef WIN_PLATFORM
+static char SNEP_SERVER_NAME[] = {'u','r','n',':','n','f','c',':','s','n',':','s','n','e','p','\0'};
+#else
 static char SNEP_SERVER_NAME[] = {'u','r','n',':','n','f','c',':','s','n',':','s','n','e','p'};
+#endif
 
 /* SNEP Server Handles */
 static tNFA_HANDLE sSnepServerHandle = 0;
@@ -112,7 +116,6 @@ static void nfaSnepClientCallback (tNFA_SNEP_EVT snepEvent, tNFA_SNEP_EVT_DATA *
             {
                 nativeNfcSnep_notifyClientDeactivated();
             }
-            sSnepClientConnectionHandle = 0;
             nativeNfcSnep_abortClientWaits();
             nativeNfcTag_registerNdefTypeHandler();
             break;
@@ -128,18 +131,11 @@ static void nfaSnepClientCallback (tNFA_SNEP_EVT snepEvent, tNFA_SNEP_EVT_DATA *
                 sNfaSnepClientConnEvent.notifyOne ();
             }
             break;
-
         case NFA_SNEP_DISC_EVT:
             NXPLOG_API_D ("%s: NFA_SNEP_DISC_EVT: Client Connection/Register Handle: 0x%04x\n", __FUNCTION__, eventData->disc.conn_handle);
-
-            if((sSnepClientHandle == eventData->disc.conn_handle) ||
-                    (sSnepClientConnectionHandle == eventData->disc.conn_handle))
             {
-                SyncEventGuard guard (sNfaSnepClientDisconnEvent);
-                sSnepClientConnectionHandle = 0;
-                sNfaSnepClientDisconnEvent.notifyOne ();
+                nativeNfcSnep_abortClientWaits();
             }
-
             break;
         case NFA_SNEP_PUT_RESP_EVT:
             NXPLOG_API_D ("%s: NFA_SNEP_PUT_RESP_EVT: Server Response Code: 0x%04x\n", __FUNCTION__, eventData->put_resp.resp_code);
@@ -279,7 +275,7 @@ void nativeNfcSnep_notifyClientActivated()
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if(sClientCallback)
+        if(sClientCallback&& (NULL != sClientCallback->onDeviceArrival))
         {
             sClientCallback->onDeviceArrival();
         }
@@ -290,9 +286,9 @@ void nativeNfcSnep_notifyClientDeactivated()
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if(sClientCallback)
+        if(sClientCallback&& (NULL != sClientCallback->onDeviceDeparture))
         {
-            sClientCallback->onDeviceDepature();
+            sClientCallback->onDeviceDeparture();
         }
     }
 }
@@ -301,7 +297,7 @@ void nativeNfcSnep_notifyServerActivated()
 {
     if (nativeNfcManager_isNfcActive())
     {
-        if(sServerCallback)
+        if(sServerCallback&& (NULL != sServerCallback->onDeviceArrival))
         {
             sServerCallback->onDeviceArrival();
         }
@@ -313,9 +309,9 @@ void nativeNfcSnep_notifyServerDeactivated()
     if (nativeNfcManager_isNfcActive())
     {
         sSnepServerConnectionHandle = 0;
-        if(sServerCallback)
+        if(sServerCallback&& (NULL != sServerCallback->onDeviceDeparture))
         {
-            sServerCallback->onDeviceDepature();
+            sServerCallback->onDeviceDeparture();
         }
     }
 }
@@ -396,7 +392,7 @@ static void nativeNfcSnep_doPutReceived (tNFA_HANDLE handle, UINT8 *data, UINT32
     if((sSnepServerConnectionHandle == handle) &&
            NULL != data && 0x00 != length)
     {
-        if (sServerCallback)
+        if (sServerCallback&& (NULL != sServerCallback->onMessageReceived))
         {
             sServerCallback->onMessageReceived(data, length);
         }
@@ -582,7 +578,7 @@ void nativeNfcSnep_stopServer()
 
 INT32 nativeNfcSnep_putMessage(UINT8* msg, UINT32 length)
 {
-    tNFA_STATUS status = NFA_STATUS_OK;
+    tNFA_STATUS status = NFA_STATUS_FAILED;
     NXPLOG_API_D ("%s: data length = %d", __FUNCTION__, length);
 
     if (!sSnepClientHandle)
@@ -630,7 +626,11 @@ INT32 nativeNfcSnep_putMessage(UINT8* msg, UINT32 length)
         if (sSnepClientPutState != NFA_STATUS_OK)
         {
             status = NFA_STATUS_FAILED;
-            goto clean_and_return;
+        }
+        else
+        {
+            status = NFA_STATUS_OK;
+            sSnepClientPutState = NFA_STATUS_FAILED;
         }
     }
     /* Disconnect from Snep Server */

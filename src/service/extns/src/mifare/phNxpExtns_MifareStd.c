@@ -458,6 +458,11 @@ STATIC void Mfc_WriteNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status)
     tNFA_CONN_EVT_DATA conn_evt_data;
 
     conn_evt_data.status = status;
+    if( NULL != NdefInfo.psUpperNdefMsg->buffer )
+    {
+         NdefInfo.psUpperNdefMsg->buffer = NULL;
+         NdefInfo.psUpperNdefMsg->length = 0;
+    }
     (*gphNxpExtns_Context.p_conn_cback) (NFA_WRITE_CPLT_EVT, &conn_evt_data);
 
     return;

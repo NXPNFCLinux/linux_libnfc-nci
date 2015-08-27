@@ -52,7 +52,7 @@ public:
     static RoutingManager& getInstance ();
     bool initialize();
     void finalize();
-    void enableRoutingToHost();
+    void enableRoutingToHost(bool skipCheckNDEF);
     void disableRoutingToHost();
     void registerHostCallback(nfcHostCardEmulationCallback_t *callback);
     void deregisterHostCallback();
@@ -80,6 +80,7 @@ private:
     int mDefaultEe; //since this variable is used in both cases moved out of compiler switch
     int mHostListnEnable;
     int mFwdFuntnEnable;
+    bool mSkipCheckNDEF;
     nfcHostCardEmulationCallback_t *mCallback;
 };
 

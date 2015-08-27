@@ -174,14 +174,12 @@ INCLUDE_PARAMS :=$(LIBNFC_NCI_INCLUDE:%=-I$(srcdir)/%)
 INCLUDE_PARAMS +=$(HALIMPL_INCLUDE:%=-I$(srcdir)/%)
 INCLUDE_PARAMS +=$(SERVICE_INCLUDE:%=-I$(srcdir)/%)
 
-#NXP PN547 Enable
 #variables for NFC_NXP_CHIP_TYPE
 PN547C2 := 1
 PN548C2 := 2
 PN551C2 := 3
 
-libnfc_nci_linux_la_FLAGS =
-#NXP PN547 Enable
+libnfc_nci_linux_la_FLAGS = 
 libnfc_nci_linux_la_FLAGS += -DPN547C2=1
 libnfc_nci_linux_la_FLAGS += -DPN548C2=2
 libnfc_nci_linux_la_FLAGS += -DPN551C2=3
@@ -190,11 +188,11 @@ libnfc_nci_linux_la_FLAGS += -pthread -w -g
 libnfc_nci_linux_la_FLAGS += -DNFC_NXP_NOT_OPEN_INCLUDED=TRUE
 libnfc_nci_linux_la_FLAGS += -DNXP_HW_SELF_TEST
 libnfc_nci_linux_la_FLAGS += -DDEBUG
+libnfc_nci_linux_la_FLAGS += -DNXP_NFC_NATIVE_ENABLE_HCE=TRUE
 
 if PN7120
 libnfc_nci_linux_la_FLAGS += -DNFC_NXP_CHIP_TYPE=PN547C2 -DNXP_CHIP_NAME=\"pn7120\"
 libnfc_nci_linux_la_FLAGS += -DPH_NCI_NXP_HAL_ENABLE_FW_DOWNLOAD=FALSE
-libnfc_nci_linux_la_FLAGS += -DNXP_NFC_NATIVE_ENABLE_HCE=FALSE
 endif
 
 libnfc_nci_linux_la_LIBADD = $(AC_LIBOBJS)

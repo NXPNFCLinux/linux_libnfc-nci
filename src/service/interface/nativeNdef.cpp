@@ -105,7 +105,7 @@ static INT32 parseBluetoothAddress(UINT8* payload, UINT32 payload_length, UINT8 
         return -1;
     }
     //get address from little endian
-    p = payload + BLUETOOTH_ADDRESS_LENGTH;
+    p = payload + (BLUETOOTH_ADDRESS_LENGTH - 1);
     for (xx = 0; xx < BLUETOOTH_ADDRESS_LENGTH; xx++)
     {
         address[xx] = *p--;
@@ -420,7 +420,15 @@ INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT
     {
         return -1;
     }
-    prefixIdx = payload[0];
+
+    if( payload[0]  >= URI_PREFIX_MAP_LENGTH )
+    {
+        prefixIdx = 0;
+    }
+    else
+    {
+        prefixIdx = payload[0];
+    }
     prefixLen = strlen(URI_PREFIX_MAP[prefixIdx]);
     if (urlBufferLen >= payloadLength + prefixLen)
     {
@@ -635,6 +643,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
     UINT8 bt_type;
     UINT16 wifi_len;
     UINT16 wifi_type;
+    UINT8 status = -1;
 
     (void)ndefBuffLen;
     if (hsInfo == NULL)
@@ -671,12 +680,18 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
             return -1;
         }
     }
+    else
+    {
+        NXPLOG_API_E ("%s: Hs record not found", __FUNCTION__);
+        return -1;
+    }
 
     p_record = NDEF_MsgGetFirstRecByType (ndefBuff, NDEF_TNF_MEDIA,
                                           BT_OOB_REC_TYPE, BT_OOB_REC_TYPE_LEN);
 
     if (p_record)
     {
+        status = 0;
         NXPLOG_API_D ("%s: Found BT OOB record");
         if (p_hs_record)
         {
@@ -715,19 +730,18 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
             switch (bt_type)
             {
                 case BT_HANDOVER_TYPE_SHORT_LOCAL_NAME:
-                    hsInfo->bluetooth.device_name = p_payload;
-                    hsInfo->bluetooth.device_name_length = bt_len;
+                    hsInfo->bluetooth.device_name = &p_payload[index];
+                    hsInfo->bluetooth.device_name_length = bt_len-1;
                     break;
                 case BT_HANDOVER_TYPE_LONG_LOCAL_NAME:
                     if (hsInfo->bluetooth.device_name)
                     {
                         break;  // prefer short name
                     }
-                    hsInfo->bluetooth.device_name = p_payload;
-                    hsInfo->bluetooth.device_name_length = bt_len;
+                    hsInfo->bluetooth.device_name = &p_payload[index];
+                    hsInfo->bluetooth.device_name_length = bt_len-1;
                     break;
                 default:
-                    index += (bt_len - 1);
                     break;
             }
         }
@@ -739,6 +753,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
 
         if (p_record)
         {
+            status = 0;
             NXPLOG_API_D ("%s: Found BLE OOB record", __FUNCTION__);
             if (p_hs_record)
             {
@@ -774,19 +789,18 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
                         parseBluetoothAddress(&p_payload[index] , record_payload_len - index, hsInfo->bluetooth.address);
                         break;
                     case BT_HANDOVER_TYPE_SHORT_LOCAL_NAME:
-                        hsInfo->bluetooth.device_name = p_payload;
-                        hsInfo->bluetooth.device_name_length = bt_len;
+                        hsInfo->bluetooth.device_name = &p_payload[index];
+                        hsInfo->bluetooth.device_name_length = bt_len-1;
                         break;
                     case BT_HANDOVER_TYPE_LONG_LOCAL_NAME:
                         if (hsInfo->bluetooth.device_name)
                         {
                             break;  // prefer short name
                         }
-                        hsInfo->bluetooth.device_name = p_payload;
-                        hsInfo->bluetooth.device_name_length = bt_len;
+                        hsInfo->bluetooth.device_name = &p_payload[index];
+                        hsInfo->bluetooth.device_name_length = bt_len-1;
                         break;
                     default:
-                        index += (bt_len - 1);
                         break;
                 }
             }        
@@ -797,6 +811,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
 
     if (p_record)
     {
+        status = 0;
         NXPLOG_API_D ("%s: Found WiFi record", __FUNCTION__);
         if (p_hs_record)
         {
@@ -823,24 +838,33 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
         index = 0;
         while(index < record_payload_len)
         {
-            wifi_type = (UINT16)((p_payload[index++] << 8) + p_payload[index++]);
-            wifi_len = (UINT16)((p_payload[index++] << 8) + p_payload[index++]);
+            /* wifi type is a 2 byte field*/
+            wifi_type = p_payload[index++];
+            wifi_type = wifi_type << 8;
+            wifi_type += p_payload[index++];
+
+            /* wifi len is a 2 byte field */
+            wifi_len = p_payload[index++];
+            wifi_len = wifi_len << 8;
+            wifi_len += p_payload[index++];
+
             switch (wifi_type)
             {
                 case WIFI_HANDOVER_SSID_ID:
                     hsInfo->wifi.ssid_length = wifi_len;
-                    hsInfo->wifi.ssid = p_payload;
+                    hsInfo->wifi.ssid = &p_payload[index];
+                    index += hsInfo->wifi.ssid_length;
                     break;
                 case WIFI_HANDOVER_NETWORK_KEY_ID:
-                    hsInfo->wifi.key_length= wifi_len;
-                    hsInfo->wifi.key = p_payload;
+                    hsInfo->wifi.key_length = wifi_len;
+                    hsInfo->wifi.key = &p_payload[index];
+                    index += hsInfo->wifi.key_length;
                     break;
                 default:
-                    index += (wifi_len - 2);
                     break;
             }
         }
     }
-    return 0;
+    return status;
 }
 

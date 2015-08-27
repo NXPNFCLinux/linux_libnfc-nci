@@ -79,6 +79,7 @@ extern "C"
                                      | NFA_TECHNOLOGY_MASK_KOVIO)
 #define DEFAULT_DISCOVERY_DURATION       500
 #define READER_MODE_DISCOVERY_DURATION    200
+#undef MULTI_PROTOCOL_TAG
 /* Transaction Events in order */
 typedef enum transcation_events
 {
@@ -262,6 +263,9 @@ static void handleRfDiscoveryEvent (tNFC_RESULT_DEVT* discoveredDevice)
         }
         //select the first of multiple tags that is discovered
         NfcTag::getInstance ().selectFirstTag();
+#ifndef MULTI_PROTOCOL_TAG
+        NfcTag::getInstance ().mNumDiscNtf = 0;
+#endif
     }
 }
 
@@ -464,7 +468,9 @@ static void nfaConnectionCallback (UINT8 connEvent, tNFA_CONN_EVT_DATA* eventDat
 
             if(NfcTag::getInstance ().mNumDiscNtf)
             {
+#ifdef MULTI_PROTOCOL_TAG
                 NFA_Deactivate (TRUE);
+#endif
             }
         }
         break;
@@ -480,8 +486,10 @@ static void nfaConnectionCallback (UINT8 connEvent, tNFA_CONN_EVT_DATA* eventDat
         NfcTag::getInstance().setDeactivationState (eventData->deactivated);
         if(NfcTag::getInstance ().mNumDiscNtf)
         {
+#ifdef MULTI_PROTOCOL_TAG
             NfcTag::getInstance ().mNumDiscNtf--;
             NfcTag::getInstance().selectNextTag();
+#endif
         }
         if (eventData->deactivated.type != NFA_DEACTIVATE_TYPE_SLEEP)
         {
@@ -1446,7 +1454,7 @@ INT32 nativeNfcManager_doDeinitialize ()
 **
 *******************************************************************************/
 void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
-    BOOLEAN reader_mode, BOOLEAN enable_host_routing, BOOLEAN restart)
+    BOOLEAN reader_mode, INT32 enable_host_routing, BOOLEAN restart)
 {
     tNFA_STATUS status = NFA_STATUS_OK;
     tNFA_TECHNOLOGY_MASK tech_mask = DEFAULT_TECH_MASK;
@@ -1561,10 +1569,10 @@ void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
             else
             {
  #if(NXP_NFC_NATIVE_ENABLE_HCE ==  TRUE)
-                if (enable_host_routing)
+                if (enable_host_routing && FLAG_HCE_ENABLE_HCE)
                 {
 		    NXPLOG_API_D ("Host Card Emulation Enabled");
-                    RoutingManager::getInstance().enableRoutingToHost();
+                    RoutingManager::getInstance().enableRoutingToHost(enable_host_routing & FLAG_HCE_SKIP_NDEF_CHECK);
                 }
                 else
 #endif

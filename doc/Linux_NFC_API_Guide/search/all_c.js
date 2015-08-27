@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['ssid',['ssid',['../structnfc__wifi__pairing__t.html#a2550dd60e0a3c28016bcf00211a40d76',1,'nfc_wifi_pairing_t']]],
-  ['ssid_5flength',['ssid_length',['../structnfc__wifi__pairing__t.html#a0b5d0473b67e95de4974425c55d88fdb',1,'nfc_wifi_pairing_t']]]
+  ['power_5fstate',['power_state',['../structnfc__btoob__pairing__t.html#aecc2447ff2bc8675c9899a9347dc689d',1,'nfc_btoob_pairing_t::power_state()'],['../structnfc__wifi__pairing__t.html#ac66cfb068c42e4abc29d455f6db14faa',1,'nfc_wifi_pairing_t::power_state()']]],
+  ['protocol',['protocol',['../structnfc__tag__info__t.html#a7019d0eb48e5ac62425e2596d9974433',1,'nfc_tag_info_t']]]
 ];

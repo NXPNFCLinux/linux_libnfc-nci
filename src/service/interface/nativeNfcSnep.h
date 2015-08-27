@@ -26,6 +26,8 @@
 extern "C" {
 #endif
 
+#undef WIN_PLATFORM
+
 extern INT32 nativeNfcSnep_registerClientCallback(nfcSnepClientCallback_t *clientCallback);
 
 extern void nativeNfcSnep_deregisterClientCallback();

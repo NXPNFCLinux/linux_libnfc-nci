@@ -77,7 +77,7 @@ INT32 nativeNfcManager_doDeinitialize ();
 **
 *******************************************************************************/
 void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
-    BOOLEAN reader_mode, BOOLEAN enable_host_routing, BOOLEAN restart);
+    BOOLEAN reader_mode, INT32 enable_host_routing, BOOLEAN restart);
 
 
 /*******************************************************************************
