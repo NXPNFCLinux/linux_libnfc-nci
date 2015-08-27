@@ -8,11 +8,8 @@ Further details about the stack [here](doc/AN11697 - PN7120 Linux Sofware Stack 
 
 Release version
 ---------------
-R0.4 is the first official delivery of the Linux libnfc-nci stack.
+R1.0 is the official Linux libnfc-nci stack
 
-All targeted features available but not fully tested. R1.0 with full test is planned in mid-Q3 2015 (intermediate release may be delivered in case of major issue reported).
-
-Possible problems, known errors and restrictions of R0.4:
+Possible problems, known errors and restrictions of R1.0:
 ---------------------------------------------------------
-* RF stuck observed during P2P communication (low occurrence).
-* Current logic is not checking the polling loop status before starting SNEP server or HCE.
+none
