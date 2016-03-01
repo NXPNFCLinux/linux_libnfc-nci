@@ -1361,7 +1361,10 @@ void nativeNfcTag_onTagArrival(nfc_tag_info_t *tag)
     }
 
     /* start presence check thread */
-    ret = pthread_create(&presenceCheck_thread, NULL, presenceCheckThread, NULL);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    ret = pthread_create(&presenceCheck_thread, &attr, presenceCheckThread, NULL);
     if(ret != 0)
     {
         NXPLOG_API_E("Unable to create the thread");
@@ -1565,7 +1568,7 @@ INT32 nativeNfcTag_doReadNdef(UINT32 tagHandle, UINT8* ndefBuffer,  UINT32 ndefB
     if (ndefBuffer == NULL || ndefBufferLength <= 0)
     {
         NXPLOG_API_E ("%s: invalide buffer!", __FUNCTION__);
-        goto End;
+        return -1;
     }
     gSyncMutex.lock();
     if (!nativeNfcManager_isNfcActive())
@@ -1632,7 +1635,7 @@ End:
     sRxDataBufferLen = 0;
     gSyncMutex.unlock();
     NXPLOG_API_D ("%s: exit", __FUNCTION__);
-    return (isNdef) ? sRxDataActualSize : 0;
+    return (isNdef) ? sRxDataActualSize : -1;
 }
 
 /*******************************************************************************

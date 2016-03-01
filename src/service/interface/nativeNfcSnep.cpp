@@ -144,6 +144,11 @@ static void nfaSnepClientCallback (tNFA_SNEP_EVT snepEvent, tNFA_SNEP_EVT_DATA *
             {
                 nativeNfcSnep_doPutCompleted (NFA_STATUS_OK);
             }
+            else if((sSnepClientConnectionHandle == eventData->put_resp.conn_handle)
+                    && (NFA_SNEP_RESP_CODE_UNSUPP_VER == eventData->put_resp.resp_code))
+            {
+                nativeNfcSnep_doPutCompleted (NFA_STATUS_OK);  //workaround need to fix later
+            }
             else
             {
                 nativeNfcSnep_doPutCompleted (NFA_STATUS_FAILED);
@@ -527,7 +532,10 @@ INT32 nativeNfcSnep_startServer(nfcSnepServerCallback_t *serverCallback)
         }
         sNfaSnepServerRegEvent.wait();
     }
-    ret = pthread_create(&snepRespThread, NULL, snepServerThread, NULL);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    ret = pthread_create(&snepRespThread, &attr, snepServerThread, NULL);
     if(ret != 0)
     {
         NXPLOG_API_E("Unable to create snep server thread");

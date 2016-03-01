@@ -87,6 +87,9 @@ extern "C" {
 #define NFC_TTYPE_P2P_PRIO_LOGIC_CLEANUP    112  /* added for p2p prio logic clenaup */
 #endif
 #define NFC_TTYPE_VS_BASE                   200
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#define NFC_TTYPE_LLCP_DPS_PDU              113
+#endif
 
 
 /* NFC Task event messages */

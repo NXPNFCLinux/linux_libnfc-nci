@@ -1356,6 +1356,18 @@ UINT32 LLCP_FlushDataLinkRxData (UINT8  local_sap,
 
     if (p_dlcb)
     {
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+        if(llcp_secured.p2p_flag == TRUE)
+        {
+            while (p_dlcb->i_rx_q.p_first)
+            {
+                GKI_freebuf (GKI_dequeue (&p_dlcb->i_rx_q));
+                llcp_cb.total_rx_i_pdu--;
+             }
+         }
+   else
+   {
+#endif
         /* if any I PDU in rx queue */
         while (p_dlcb->i_rx_q.p_first)
         {
@@ -1380,6 +1392,9 @@ UINT32 LLCP_FlushDataLinkRxData (UINT8  local_sap,
                 llcp_cb.total_rx_i_pdu--;
             }
         }
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    }
+#endif
 
         p_dlcb->num_rx_i_pdu = 0;
 

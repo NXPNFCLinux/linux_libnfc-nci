@@ -398,7 +398,13 @@ void nfc_gen_cleanup (void)
         GKI_freebuf (nfc_cb.p_nci_init_rsp);
         nfc_cb.p_nci_init_rsp = NULL;
     }
-
+#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+    if(NULL != nfc_cb.p_last_disc)
+    {
+        GKI_freebuf(nfc_cb.p_last_disc);
+        nfc_cb.p_last_disc = NULL;
+    }
+#endif
     /* clear any pending CMD/RSP */
     nfc_main_flush_cmd_queue ();
 }
@@ -589,6 +595,13 @@ void nfc_main_flush_cmd_queue (void)
     {
         GKI_freebuf (p_msg);
     }
+#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+    if(NULL != nfc_cb.last_cmd_buf)
+    {
+        GKI_freebuf (nfc_cb.last_cmd_buf);
+        nfc_cb.last_cmd_buf = NULL;
+    }
+#endif
 }
 
 /*******************************************************************************

@@ -87,7 +87,9 @@ static pthread_cond_t   gki_timer_update_cond;
 static pthread_t            timer_thread_id = 0;
 #endif
 
-
+#if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+UINT8 gki_buf_init_done = FALSE;
+#endif
 /* For Android */
 
 #ifndef GKI_SHUTDOWN_EVT
@@ -147,9 +149,19 @@ void GKI_init(void)
     pthread_mutexattr_t attr;
     tGKI_OS             *p_os;
 
+#if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+    /* Added to avoid re-initialization of memory pool (memory leak) */
+    if(!gki_buf_init_done)
+    {
+        memset (&gki_cb, 0, sizeof (gki_cb));
+        gki_buffer_init();
+        gki_buf_init_done = TRUE;
+    }
+#else
     memset (&gki_cb, 0, sizeof (gki_cb));
 
     gki_buffer_init();
+#endif
     gki_timers_init();
     gki_cb.com.OSTicks = (UINT32) times(0);
 

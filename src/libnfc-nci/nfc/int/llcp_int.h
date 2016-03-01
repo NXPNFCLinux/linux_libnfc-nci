@@ -66,6 +66,18 @@ typedef UINT8 tLLCP_LINK_STATE;
 #define LLCP_LINK_SYMM_LOCAL_XMIT_NEXT   0
 #define LLCP_LINK_SYMM_REMOTE_XMIT_NEXT  1
 
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+typedef struct {
+    TIMER_LIST_ENT    dps_timer;                /* dpspdu timer */
+    UINT16            dps_delay;                /* Delay DPS response */
+    BOOLEAN           dps_state;                /* dps state */
+    BOOLEAN           p2p_flag;                 /* p2p flag */
+    BT_HDR            *dps_msg;                 /* dps message */
+} tLLCP_SECURED;
+tLLCP_SECURED llcp_secured;
+#endif
+
+
 /*
 ** LLCP internal flags
 */

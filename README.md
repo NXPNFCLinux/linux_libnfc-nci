@@ -8,8 +8,9 @@ Further details about the stack [here](https://github.com/NXPNFCLinux/linux_libn
 
 Release version
 ---------------
-R1.0 is the official Linux libnfc-nci stack
+R2.0 includes LLCP1.3 support and some bug fixes (refer to the [documentation](https://github.com/NXPNFCLinux/linux_libnfc-nci/blob/master/doc/AN11697%20-%20PN7120%20Linux%20Software%20Stack%20Integration%20Guidelines.pdf) for more details).
+R1.0 is the first official release of Linux libnfc-nci stack
 
-Possible problems, known errors and restrictions of R1.0:
+Possible problems, known errors and restrictions of R2.0:
 ---------------------------------------------------------
-none
+LLCP1.3 support requires OpenSSL Cryptography and SSL/TLS Toolkit (version 1.0.1j or later)

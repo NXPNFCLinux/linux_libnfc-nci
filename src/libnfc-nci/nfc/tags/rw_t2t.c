@@ -285,6 +285,7 @@ void rw_t2t_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
 {
     tRW_T2T_CB  *p_t2t  = &rw_cb.tcb.t2t;
     tRW_READ_DATA       evt_data;
+    BOOLEAN    b_release  = FALSE;
 
     RW_TRACE_DEBUG2 ("rw_t2t_conn_cback: conn_id=%i, evt=%i", conn_id, event);
     /* Only handle static conn_id */
@@ -351,6 +352,7 @@ void rw_t2t_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
 
             evt_data.p_data = NULL;
             (*rw_cb.p_cback) (RW_T2T_INTF_ERROR_EVT, (tRW_DATA *) &evt_data);
+            b_release = TRUE;
             break;
         }
         nfc_stop_quick_timer (&p_t2t->t2_timer);
@@ -374,18 +376,22 @@ void rw_t2t_conn_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_data)
         {
             rw_t2t_process_error ();
         }
+        b_release = TRUE;
+        break;
+    default:
+        break;
+    }
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+    if(b_release == TRUE)
+    {
         /* Free the response buffer in case of invalid response*/
         if (p_data != NULL) {
                 GKI_freebuf((BT_HDR *) (p_data->data.p_data));
         }
-#endif
-        break;
-
-    default:
-        break;
-
     }
+#endif
+
+
 }
 
 /*******************************************************************************

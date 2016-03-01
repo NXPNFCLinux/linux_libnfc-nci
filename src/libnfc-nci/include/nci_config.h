@@ -97,6 +97,9 @@ int GetNumValue(const char* name, void* p_value, unsigned long len);
 #define NAME_NFA_DM_DISC_NTF_TIMEOUT    "NFA_DM_DISC_NTF_TIMEOUT"
 #define NAME_NXP_FWD_FUNCTIONALITY_ENABLE   "NXP_FWD_FUNCTIONALITY_ENABLE"
 #endif
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#define NAME_LLCP_SECURED_P2P_ENABLE    "LLCP_SECURED_P2P_ENABLE"
+#endif
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
 #define NAME_NXP_PRFD_TECH_SE            "NXP_PRFD_TECH_SE"
 #endif

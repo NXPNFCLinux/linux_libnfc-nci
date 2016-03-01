@@ -884,6 +884,12 @@ void llcp_dlc_proc_i_pdu (UINT8 dsap, UINT8 ssap, UINT16 i_pdu_length, UINT8 *p_
         }
 
         info_len = i_pdu_length - LLCP_PDU_HEADER_SIZE - LLCP_SEQUENCE_SIZE;
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+        if(llcp_secured.p2p_flag == TRUE && p_msg !=NULL)
+        {
+            llcp_data_decrypt(p_msg);
+        }
+#endif
 
         if (info_len > p_dlcb->local_miu)
         {

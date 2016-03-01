@@ -2,6 +2,13 @@ lib_LTLIBRARIES = libnfc_nci_linux.la
 
 sbin_PROGRAMS = nfcDemoApp 
 nfcDemoApp_DEPENDENCIES = libnfc_nci_linux.la
+
+LDFLAGS = -Bstatic 
+
+if LLCP1_3
+LDFLAGS += -L$(openssldir)/lib -lcrypto -lssl
+endif
+
 nfcDemoApp_FLAGS = -I$(srcdir)/demoapp -I$(srcdir)/src/include 
 
 AM_CPPFLAGS = \
@@ -10,6 +17,11 @@ AM_CPPFLAGS = \
 	$(libnfc_nci_linux_la_FLAGS) \
 	$(nfcDemoApp_FLAGS)
 
+if LLCP1_3
+AM_CPPFLAGS += \
+	-I$(openssldir)/include
+endif
+	
 configdir = ${sysconfdir}
 
 if PN7120
@@ -68,6 +80,7 @@ LIBNFC_NCI_SOURCE := \
 	src/libnfc-nci/gki/common/gki_time.c \
 	src/libnfc-nci/gki/common/gki_buffer.c \
 	src/libnfc-nci/gki/ulinux/gki_ulinux.c \
+	src/libnfc-nci/nfc/cipher/cipher.c \
 	src/libnfc-nci/nfc/llcp/llcp_sdp.c \
 	src/libnfc-nci/nfc/llcp/llcp_link.c \
 	src/libnfc-nci/nfc/llcp/llcp_api.c \
@@ -150,6 +163,7 @@ SERVICE_SOURCE := \
 	src/service/interface/nativeNfcHandover.cpp \
 	src/service/interface/nativeNfcManager.cpp \
 	src/service/interface/nativeNfcSnep.cpp \
+	src/service/interface/nativeNfcLlcp.cpp \
 	src/service/interface/RoutingManager.cpp \
 	src/service/extns/src/mifare/phFriNfc_SmtCrdFmt.c \
 	src/service/extns/src/mifare/phNxpExtns_MifareStd.c \
@@ -189,6 +203,12 @@ libnfc_nci_linux_la_FLAGS += -DNFC_NXP_NOT_OPEN_INCLUDED=TRUE
 libnfc_nci_linux_la_FLAGS += -DNXP_HW_SELF_TEST
 libnfc_nci_linux_la_FLAGS += -DDEBUG
 libnfc_nci_linux_la_FLAGS += -DNXP_NFC_NATIVE_ENABLE_HCE=TRUE
+
+if LLCP1_3
+libnfc_nci_linux_la_FLAGS += -DNFC_NXP_LLCP_SECURED_P2P=TRUE
+else
+libnfc_nci_linux_la_FLAGS += -DNFC_NXP_LLCP_SECURED_P2P=FALSE
+endif
 
 if PN7120
 libnfc_nci_linux_la_FLAGS += -DNFC_NXP_CHIP_TYPE=PN547C2 -DNXP_CHIP_NAME=\"pn7120\"

@@ -295,6 +295,9 @@ void nfc_process_quick_timer_evt (void)
         case NFC_TTYPE_LLCP_LINK_INACT:
         case NFC_TTYPE_LLCP_DATA_LINK:
         case NFC_TTYPE_LLCP_DELAY_FIRST_PDU:
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+        case NFC_TTYPE_LLCP_DPS_PDU:
+#endif
             llcp_process_timeout (p_tle);
             break;
 #endif

@@ -427,6 +427,12 @@
 #define LLCP_DELAY_RESP_TIME        20      /* in ms */
 #endif
 
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/* LLCP DPS Delay Resp Timeout */
+#ifndef LLCP_DPS_DELAY_RESP_TIME
+#define LLCP_DPS_DELAY_RESP_TIME        40      /* in ms */
+#endif
+#endif
 /* LLCP inactivity timeout for initiator */
 #ifndef LLCP_INIT_INACTIVITY_TIMEOUT
 #define LLCP_INIT_INACTIVITY_TIMEOUT            0    /* in ms */
@@ -449,7 +455,11 @@
 
 /* Options Parameters */
 #ifndef LLCP_OPT_VALUE
-#define LLCP_OPT_VALUE              LLCP_LSC_3  /* Link Service Class 3 */
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#define LLCP_OPT_VALUE              LLCP_LSC_3 |(LLCP_DPC_1 << 2)      /* Link Service Class 3 +  Data Protection Class */
+#else
+#define LLCP_OPT_VALUE              LLCP_LSC_3                         /* Link Service Class 3 */
+#endif
 #endif
 
 /* Data link connection timeout */

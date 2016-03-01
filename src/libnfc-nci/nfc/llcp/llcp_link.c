@@ -49,8 +49,10 @@
 #include "llcp_int.h"
 #include "llcp_defs.h"
 #include "nfc_int.h"
-
-
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#include "nci_config.h"
+#include "cipher.h"
+#endif
 const UINT16 llcp_link_rwt[15] =  /* RWT = (302us)*2**WT; 302us = 256*16/fc; fc = 13.56MHz */
 {
        1, /* WT=0,     302us */
@@ -74,6 +76,17 @@ static BOOLEAN llcp_link_parse_gen_bytes (UINT8 gen_bytes_len, UINT8 *p_gen_byte
 static BOOLEAN llcp_link_version_agreement (void);
 
 static void    llcp_link_send_SYMM (void);
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+static void llcp_link_send_dps_pdu();
+void llcp_link_proc_dps_pdu(BT_HDR *dps_msg);
+static void llcp_link_start_dpspdu_timer (void);
+static void llcp_link_stop_dpspdu_timer (void);
+static void llcp_secured_init(void);
+static void llcp_secured_data_transfer(void);
+void llcp_data_encrypt(BT_HDR *p_buf);
+void llcp_data_decrypt(BT_HDR *p_buf);
+#endif
+static void llcp_data_transfer(void);
 static void    llcp_link_update_status (BOOLEAN is_activated);
 static void    llcp_link_check_congestion (void);
 static void    llcp_link_check_uncongested (void);
@@ -138,6 +151,39 @@ static void llcp_link_stop_inactivity_timer (void)
         nfc_stop_quick_timer (&llcp_cb.lcb.inact_timer);
     }
 }
+
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/*******************************************************************************
+**
+** Function         llcp_link_start_dpspdu_timer
+**
+** Description      This function start LLCP DPS PDU timer.
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_link_start_dpspdu_timer (void)
+{
+    LLCP_TRACE_DEBUG0 (" Start dpspdu timer");
+    nfc_start_quick_timer (&llcp_secured.dps_timer, NFC_TTYPE_LLCP_DPS_PDU,
+            (((UINT32) llcp_secured.dps_delay) * QUICK_TIMER_TICKS_PER_SEC) / 1000);
+}
+
+/*******************************************************************************
+**
+** Function         llcp_link_stop_dpspdu_timer
+**
+** Description      This function stop LLCP DPS PDU timer.
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_link_stop_dpspdu_timer (void)
+{
+    LLCP_TRACE_DEBUG0 ("  Stop dpspdu timer");
+    nfc_stop_quick_timer (&llcp_secured.dps_timer);
+}
+#endif
 
 /*******************************************************************************
 **
@@ -264,6 +310,112 @@ tLLCP_STATUS llcp_link_activate (tLLCP_ACTIVATE_CONFIG *p_config)
     else
         llcp_cb.lcb.effective_miu = llcp_cb.lcb.local_link_miu;
 
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    if((llcp_cb.lcb.local_opt & (LLCP_DPC_1 << 2)) && (llcp_cb.lcb.peer_opt & (LLCP_DPC_1 << 2 )))
+    {
+        llcp_secured.p2p_flag = TRUE;
+        llcp_secured_data_transfer();
+    }
+    else
+#endif
+    {
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+        llcp_secured.p2p_flag = FALSE;
+#endif
+        llcp_data_transfer();
+    }
+
+    NFC_SetStaticRfCback (llcp_link_connection_cback);
+    return (LLCP_STATUS_SUCCESS);
+
+}
+
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/*******************************************************************************
+**
+** Function         llcp_secured_init
+**
+** Description      secured p2p initialisation
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_secured_init(void)
+{
+    LLCP_TRACE_DEBUG0 ("llcp_secured_init");
+    memset (&llcp_secured, 0, sizeof (tLLCP_SECURED));
+    llcp_secured.dps_delay = LLCP_DPS_DELAY_RESP_TIME;
+    llcp_secured.dps_state = TRUE;
+    llcp_secured.p2p_flag = TRUE;
+}
+
+/*******************************************************************************
+**
+** Function         llcp_secured_deinit
+**
+** Description      secured p2p de-initialisation
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_secured_deinit(void)
+{
+    LLCP_TRACE_DEBUG0 ("llcp_secured_deinit");
+    memset (&llcp_secured, 0, sizeof (tLLCP_SECURED));
+}
+
+/*******************************************************************************
+**
+** Function         llcp_secured_data_transfer
+**
+** Description      secured p2p
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_secured_data_transfer(void)
+{
+    LLCP_TRACE_DEBUG0 ("llcp_secured_data_transfer");
+    llcp_secured_init();    //initialise the secured p2p variables
+    cipher_init();          //initialise the cipher variables
+    cipher_generate_keys(); //generate privatekey, publickey, randomnonce
+
+    if (llcp_cb.lcb.is_initiator == TRUE)
+    {
+        LLCP_TRACE_DEBUG0 ("INITIATOR");
+        llcp_link_send_dps_pdu();
+        llcp_link_start_dpspdu_timer();
+    }
+    else
+    {
+        LLCP_TRACE_DEBUG0 ("TARGET");
+        llcp_link_start_dpspdu_timer();
+    }
+
+}
+#endif
+
+/*******************************************************************************
+**
+** Function         llcp_data_transfer
+**
+** Description      normal p2p
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_data_transfer(void)
+{
+    LLCP_TRACE_DEBUG0 ("llcp_data_transfer");
+
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    if(llcp_secured.p2p_flag == TRUE)
+    {
+        LLCP_TRACE_DEBUG0 ("generate final key");
+        cipher_generate_final_key_kenc();
+    }
+#endif
+
     /*
     ** When entering the normal operation phase, LLCP shall initialize the symmetry
     ** procedure.
@@ -310,9 +462,6 @@ tLLCP_STATUS llcp_link_activate (tLLCP_ACTIVATE_CONFIG *p_config)
     /* Update link status to service layer */
     llcp_link_update_status (TRUE);
 
-    NFC_SetStaticRfCback (llcp_link_connection_cback);
-
-    return (LLCP_STATUS_SUCCESS);
 }
 
 /*******************************************************************************
@@ -481,6 +630,17 @@ void llcp_link_deactivate (UINT8 reason)
         {
             reason = LLCP_LINK_RF_LINK_LOSS_NO_RX_LLC;
         }
+
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+        if(reason == LLCP_LINK_RF_LINK_LOSS_ERR || reason == LLCP_LINK_RF_TIMEOUT)  //6106||6008
+        {
+            if( llcp_secured.p2p_flag == TRUE)
+            {
+                llcp_secured_deinit();
+                cipher_deinit();
+            }
+        }
+#endif
 
         NFC_FlushData (NFC_RF_CONN_ID);
     }
@@ -862,6 +1022,186 @@ static void llcp_link_send_SYMM (void)
     }
 }
 
+
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/*******************************************************************************
+**
+** Function         llcp_link_send_dps_pdu
+**
+** Description      Send DPS PDU for secured p2p
+**
+** Returns          void
+**
+*******************************************************************************/
+static void llcp_link_send_dps_pdu ()
+{
+    UINT8  *p;
+    llcp_secured.dps_msg = (BT_HDR*) GKI_getpoolbuf (LLCP_POOL_ID);
+
+    if (llcp_secured.dps_msg)
+    {
+        LLCP_TRACE_DEBUG0 ("llcp_link_send_dps_pdu");
+
+        llcp_secured.dps_msg->len    = LLCP_PDU_DPS_SIZE;
+        llcp_secured.dps_msg->offset = NCI_MSG_OFFSET_SIZE + NCI_DATA_HDR_SIZE;
+
+        p = (UINT8 *) (llcp_secured.dps_msg + 1) + llcp_secured.dps_msg->offset;
+        UINT16_TO_BE_STREAM (p, LLCP_GET_PDU_HEADER (LLCP_SAP_LM, LLCP_PDU_DPS_TYPE, LLCP_SAP_LM ));
+
+        {
+            UINT8_TO_BE_STREAM (p, LLCP_ECPK_TYPE);
+            UINT8_TO_BE_STREAM (p, cipher_suite.key_len*2);
+            ARRAY_TO_BE_STREAM(p, cipher_suite.pubKey_local_x_a, cipher_suite.key_len);
+            ARRAY_TO_BE_STREAM(p, cipher_suite.pubKey_local_y_a, cipher_suite.key_len);
+
+            UINT8_TO_BE_STREAM (p, LLCP_RN_TYPE);
+            UINT8_TO_BE_STREAM (p, cipher_suite.rn_len);
+            ARRAY_TO_BE_STREAM(p, cipher_suite.randomNonce_local, cipher_suite.rn_len);
+        }
+
+        NFC_SendData (NFC_RF_CONN_ID, llcp_secured.dps_msg);
+
+    }
+}
+
+void llcp_link_proc_dps_pdu(BT_HDR *dps_msg)
+{
+    UINT16 length,dpspdu_length;
+    UINT8 *p;
+    UINT8 ecpk_ptype,ecpk_len;
+    UINT8 nonce_ptype,nonce_len;
+    UINT8 pubKey1[KEY_LEN];
+    UINT8 pubKey2[KEY_LEN];
+    UINT8 randomnonce[RN_LEN];
+
+    LLCP_TRACE_DEBUG0 ("llcp_link_proc_dps_pdu");
+
+    dps_msg->len    -= LLCP_PDU_HEADER_SIZE;
+    dps_msg->offset += LLCP_PDU_HEADER_SIZE;
+
+    /*
+    ** check integrity of DPS PDU and get number of PDUs in DPS PDU
+    */
+    dpspdu_length= dps_msg->len;
+    p = (UINT8 *) (dps_msg + 1) + dps_msg->offset;
+    LLCP_TRACE_DEBUG1 ("llcp_link_proc_dps_pdu length - %d ",dpspdu_length);
+
+    BE_STREAM_TO_UINT8 (ecpk_ptype, p);
+    BE_STREAM_TO_UINT8 (ecpk_len, p);
+    BE_STREAM_TO_ARRAY(p, pubKey1, ecpk_len/2);
+    memcpy(cipher_suite.pubKey_remote_x_a,pubKey1,ecpk_len/2);
+
+    BE_STREAM_TO_ARRAY(p, pubKey2, ecpk_len/2);
+    memcpy(cipher_suite.pubKey_remote_y_a,pubKey2,ecpk_len/2);
+
+    BE_STREAM_TO_UINT8 (nonce_ptype, p);
+    BE_STREAM_TO_UINT8 (nonce_len, p);
+    BE_STREAM_TO_ARRAY(p, randomnonce, nonce_len);
+    memcpy(cipher_suite.randomNonce_remote,randomnonce,nonce_len);
+
+}
+
+/*******************************************************************************
+**
+** Function         llcp_data_encrypt
+**
+** Description
+**
+** Returns          void
+**
+*******************************************************************************/
+void llcp_data_encrypt(BT_HDR *p_buf)
+{
+
+    LLCP_TRACE_DEBUG0 ("llcp_data_encrypt");
+
+    UINT8* buff = (UINT8*)p_buf;
+    UINT16 len = BT_HDR_SIZE + p_buf->offset;  //length of BT and offset
+    UINT16 pdu_len =  LLCP_PDU_HEADER_SIZE + LLCP_SEQUENCE_SIZE;  //pdu and PC counter
+    UINT16 buff_len = p_buf->len - pdu_len;  //p_buff->len= buff_len+pdu_len
+    UINT8 pdu_buff[pdu_len];
+    UINT8 in_buff[buff_len];
+    UINT8 out_buff[buff_len];
+
+    /*get PDU type and dsap*/
+    UINT16 pdu_type;
+    UINT8 ptype;
+    UINT8 dsap;
+
+    memcpy(pdu_buff,buff+len,pdu_len);
+    pdu_type = (UINT16)(((UINT16)(*(pdu_buff)) << 8) + (UINT16)(*((pdu_buff) + 1)));
+    ptype = (UINT8) (LLCP_GET_PTYPE (pdu_type));
+    dsap = (UINT8) (LLCP_GET_DSAP (pdu_type));
+
+    if((ptype == LLCP_PDU_I_TYPE) || (ptype == LLCP_PDU_UI_TYPE))
+    {
+        LLCP_TRACE_DEBUG0 ("encrypt the information");
+
+        memcpy(in_buff,buff+len+pdu_len,buff_len);
+        aes_ccm_encrypt_data(in_buff,buff_len,pdu_buff,pdu_len,out_buff);
+        memcpy(&out_buff[buff_len],cipher_suite.tag,cipher_suite.tag_len);
+        p_buf->len = p_buf->len + cipher_suite.tag_len;
+        memcpy(buff+len+pdu_len,out_buff,p_buf->len);
+    }
+    else
+    {
+         LLCP_TRACE_DEBUG0 ("dont encrypt, not an IPDU/SNEP");
+         //not an information pdu dont encrypt
+    }
+
+}
+/*******************************************************************************
+**
+** Function         llcp_data_decrypt
+**
+** Description
+**
+** Returns          void
+**
+*******************************************************************************/
+void llcp_data_decrypt(BT_HDR *p_buf)
+{
+
+    LLCP_TRACE_DEBUG0 ("llcp_data_decrypt");
+
+    UINT8* buff = (UINT8*)p_buf;
+    UINT16 len = BT_HDR_SIZE + p_buf->offset;  //length of BT and offset
+    UINT16 pdu_len =  LLCP_PDU_HEADER_SIZE + LLCP_SEQUENCE_SIZE;  //pdu and PC counter
+    UINT16 buff_len = p_buf->len - pdu_len -cipher_suite.tag_len;  //p_buff->len= buff_len+pdu_len
+    UINT8 pdu_buff[pdu_len];
+    UINT8 in_buff[buff_len];
+    UINT8 out_buff[buff_len];
+
+    /*get PDU type and dsap*/
+    UINT16 pdu_type;
+    UINT8 ptype;
+    UINT8 dsap;
+
+    memcpy(pdu_buff,buff+len,pdu_len);
+    pdu_type = (UINT16)(((UINT16)(*(pdu_buff)) << 8) + (UINT16)(*((pdu_buff) + 1)));
+    ptype = (UINT8) (LLCP_GET_PTYPE (pdu_type));
+    dsap = (UINT8) (LLCP_GET_DSAP (pdu_type));
+
+    if((ptype == LLCP_PDU_I_TYPE) || (ptype == LLCP_PDU_UI_TYPE))
+    {
+        LLCP_TRACE_DEBUG0 ("decrypt the information");
+
+        memcpy(in_buff,buff+len+pdu_len,buff_len);
+        memcpy(cipher_suite.tag,buff+len+pdu_len+buff_len,cipher_suite.tag_len);
+        aes_ccm_decrypt_data(in_buff,buff_len,pdu_buff,pdu_len,out_buff);
+        p_buf->len = p_buf->len - cipher_suite.tag_len;
+        memcpy(buff+len+pdu_len,out_buff,p_buf->len);
+    }
+    else
+    {
+         LLCP_TRACE_DEBUG0 ("dont decrypt, not an IPDU/SNEP");
+         //not an information pdu dont decrypt
+    }
+
+}
+
+#endif
+
 /*******************************************************************************
 **
 ** Function         llcp_link_send_invalid_pdu
@@ -937,6 +1277,12 @@ void llcp_link_check_send_data (void)
 
         if (p_pdu != NULL)
         {
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    if(llcp_secured.p2p_flag == TRUE)
+    {
+        llcp_data_encrypt(p_pdu);
+    }
+#endif
             llcp_link_send_to_lower (p_pdu);
 
             /* stop inactivity timer */
@@ -1026,6 +1372,12 @@ static void llcp_link_proc_ui_pdu (UINT8  local_sap,
         }
         return;
     }
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    if(llcp_secured.p2p_flag == TRUE && p_msg !=NULL)
+    {
+        llcp_data_decrypt(p_msg);
+    }
+#endif
 
     /* if application is registered and expecting UI PDU on logical data link */
     if (  (p_app_cb)
@@ -1317,7 +1669,24 @@ static void llcp_link_proc_rx_pdu (UINT8 dsap, UINT8 ptype, UINT8 ssap, BT_HDR *
         llcp_dlc_proc_i_pdu (dsap, ssap, 0, NULL, p_msg);
         free_buffer = FALSE;
         break;
-
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    case LLCP_PDU_DPS_TYPE:
+        llcp_link_proc_dps_pdu (p_msg);
+        if (llcp_cb.lcb.is_initiator == TRUE)
+        {
+            LLCP_TRACE_DEBUG0 ("Initiator received dps pdu");
+            llcp_link_stop_dpspdu_timer();
+            llcp_data_transfer();
+        }
+        else
+        {
+            LLCP_TRACE_DEBUG0 ("Target received dps pdu");
+            llcp_link_stop_dpspdu_timer();
+            llcp_link_send_dps_pdu();
+            llcp_data_transfer();
+        }
+        break;
+#endif
     default:
         p_data = (UINT8 *) (p_msg + 1) + p_msg->offset + LLCP_PDU_HEADER_SIZE;
         llcp_dlc_proc_rx_pdu (dsap, ptype, ssap, (UINT16) (p_msg->len - LLCP_PDU_HEADER_SIZE), p_data);
@@ -1345,6 +1714,22 @@ static void llcp_link_proc_rx_data (BT_HDR *p_msg)
     BOOLEAN free_buffer = TRUE;
     BOOLEAN frame_error = FALSE;
 
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    p = (UINT8 *) (p_msg + 1) + p_msg->offset;
+    BE_STREAM_TO_UINT16 (pdu_hdr, p );
+    dsap  = LLCP_GET_DSAP (pdu_hdr);
+    ptype = (UINT8) (LLCP_GET_PTYPE (pdu_hdr));
+    ssap  = LLCP_GET_SSAP (pdu_hdr);
+
+    if(llcp_secured.dps_state == TRUE && ptype == LLCP_PDU_DPS_TYPE)
+    {
+        llcp_link_proc_rx_pdu (dsap, ptype, ssap, p_msg);
+        free_buffer = FALSE;
+        llcp_secured.dps_state = FALSE;
+    }
+    else
+    {
+#endif
     if(llcp_cb.lcb.symm_state == LLCP_LINK_SYMM_REMOTE_XMIT_NEXT)
     {
         llcp_link_stop_link_timer ();
@@ -1440,7 +1825,9 @@ static void llcp_link_proc_rx_data (BT_HDR *p_msg)
     {
         LLCP_TRACE_ERROR0 ("Received PDU in state of SYMM_MUST_XMIT_NEXT");
     }
-
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    }
+#endif
     if (free_buffer)
         GKI_freebuf (p_msg);
 }
@@ -1736,9 +2123,20 @@ void llcp_link_connection_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *
 #endif
         if (llcp_cb.lcb.link_state == LLCP_LINK_STATE_DEACTIVATED)
         {
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+            if(llcp_secured.dps_state == TRUE)
+            {
+                llcp_link_proc_rx_data ((BT_HDR *) p_data->data.p_data);
+            }
             /* respoding SYMM while LLCP is deactivated but RF link is not deactivated yet */
-            llcp_link_send_SYMM ();
-            GKI_freebuf ((BT_HDR *) p_data->data.p_data);
+            else
+            {
+#endif
+                llcp_link_send_SYMM ();
+                GKI_freebuf ((BT_HDR *) p_data->data.p_data);
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+            }
+#endif
         }
         else if (llcp_cb.lcb.link_state == LLCP_LINK_STATE_ACTIVATION_FAILED)
         {
@@ -1837,6 +2235,10 @@ static char *llcp_pdu_type (UINT8 ptype)
         return "RR";
     case LLCP_PDU_RNR_TYPE:
         return "RNR";
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    case LLCP_PDU_DPS_TYPE:
+        return "DPS";
+#endif
 
     default:
         return "RESERVED";

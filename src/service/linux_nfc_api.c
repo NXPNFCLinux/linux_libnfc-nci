@@ -23,6 +23,7 @@
 #include "nativeNfcHandover.h"
 #include "nativeNdef.h"
 #include "nfa_api.h"
+#include "nativeNfcLlcp.h"
 
 int ndef_readText(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_text, unsigned int out_text_length)
 {
@@ -263,4 +264,35 @@ int nfcHo_sendSelectRecord(unsigned char *message, unsigned int length)
 int nfcHo_sendSelectError(unsigned int reason, unsigned int data)
 {
     return nativeNfcHO_sendSelectError((unsigned char)reason, data);
+}
+
+int nfcLlcp_ConnLessRegisterClientCallback(nfcllcpConnlessClientCallback_t *client_callback)
+{
+    return nativeNfcLlcp_ConnLessRegisterClientCallback(client_callback);
+}
+void nfcLlcp_ConnLessDeregisterClientCallback()
+{
+    nativeNfcLlcp_ConnLessDeregisterClientCallback();
+
+}
+int nfcLlcp_ConnLessStartServer(nfcllcpConnlessServerCallback_t *server_callback)
+{
+    return nativeNfcLlcp_ConnLessStartServer(server_callback);
+}
+void nfcLlcp_ConnLessStopServer()
+{
+    nativeNfcLlcp_ConnLessStopServer();
+
+}
+
+int nfcLlcp_ConnLessSendMessage(unsigned char* msg, unsigned int length)
+{
+    return nativeNfcLlcp_ConnLessSendMessage(msg, length);
+
+}
+
+
+int nfcLlcp_ConnLessReceiveMessage(unsigned char* msg, unsigned int *length)
+{
+    return nativeNfcLlcp_ConnLessReceiveMessage(msg, length);
 }

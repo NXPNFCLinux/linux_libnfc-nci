@@ -369,6 +369,26 @@ typedef struct {
 }nfcSnepServerCallback_t;
 
 /**
+ * \brief NFC LLCP connectionless server callback function structure definition.
+ */
+typedef struct {
+    /**
+     * \brief NFC Peer Device callback function when device is detected.
+     */
+    void (*onDeviceArrival) (void);
+
+    /**
+     * \brief NFC Peer Device callback function when device is removed.
+     */
+    void (*onDeviceDeparture) (void);
+
+    /**
+     * \brief NFC Peer Device callback function when NDEF message is received from peer device.
+     */
+    void (*onMessageReceived)(void);
+}nfcllcpConnlessServerCallback_t;
+
+/**
  * \brief NFC SNEP client callback function structure definition.
  */
 typedef struct {
@@ -381,7 +401,7 @@ typedef struct {
      * \brief NFC Peer Device callback function when device is removed.
      */
     void (*onDeviceDeparture) (void);
-}nfcSnepClientCallback_t;
+}nfcSnepClientCallback_t, nfcllcpConnlessClientCallback_t;
 
 /**
  *  \brief Host card emulation callback function structure definition.
@@ -701,6 +721,49 @@ extern int nfcHo_sendSelectRecord(unsigned char *message, unsigned int length);
 * \return 0 if success, otherwise failed.
 */
 extern int nfcHo_sendSelectError(unsigned int reason, unsigned int data);
+
+/**
+* \brief Register a callback functions for LLCP client.
+* \param client_callback:  LLCP client callback functions.
+* \return 0 if success
+*/
+extern int nfcLlcp_ConnLessRegisterClientCallback(nfcSnepClientCallback_t *client_callback);
+
+/**
+* \brief Deregister a callback functions for LLCP client.
+* \return None
+*/
+extern void nfcLlcp_ConnLessDeregisterClientCallback();
+
+/**
+* \brief Start a LLCP Connection Less server to receive LLCP message.
+* \param server_callback:  LLCP connectionless server callback functions.
+* \return 0 if success
+*/
+extern int nfcLlcp_ConnLessStartServer(nfcllcpConnlessServerCallback_t *server_callback);
+
+/**
+* \brief Stop LLCP server.
+* \return None
+*/
+extern void nfcLlcp_ConnLessStopServer();
+
+/**
+* \brief Send a LLCP message to remote LLCP server.
+* \param msg:  LLCP message.
+* \param length:  LLCP message length.
+* \return 0 if success, otherwise failed.
+*/
+extern int nfcLlcp_ConnLessSendMessage(unsigned char* msg, unsigned int length);
+
+/**
+* \brief Receive a LLCP message from remote LLCP server.
+* \param msg:  LLCP message.
+* \param length:  LLCP message length.
+* \return 0 if success, otherwise failed.
+*/
+extern int nfcLlcp_ConnLessReceiveMessage(unsigned char* msg, unsigned int *length);
+
 
 #ifdef __cplusplus
 }

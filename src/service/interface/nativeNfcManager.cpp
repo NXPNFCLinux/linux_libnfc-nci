@@ -48,6 +48,7 @@
 #include "nativeNfcManager.h"
 #include "nativeNfcSnep.h"
 #include "RoutingManager.h"
+#include "nativeNfcLlcp.h"
 
 extern "C"
 {
@@ -1124,7 +1125,10 @@ void cleanup_timer()
     NXPLOG_API_D ("%s", __FUNCTION__);
 
     /* Transcation is done process the last request*/
-    irret = pthread_create(&transaction_thread, NULL, enableThread, NULL);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    irret = pthread_create(&transaction_thread, &attr, enableThread, NULL);
     if(irret != 0)
     {
         NXPLOG_API_E("Unable to create the thread");

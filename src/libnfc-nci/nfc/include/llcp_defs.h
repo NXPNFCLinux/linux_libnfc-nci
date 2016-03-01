@@ -52,7 +52,11 @@
 #define LLCP_PDU_DM_TYPE        7
 #define LLCP_PDU_FRMR_TYPE      8
 #define LLCP_PDU_SNL_TYPE       9
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#define LLCP_PDU_DPS_TYPE       10
+#else
 #define LLCP_PDU_RESERVED_1010  10
+#endif
 #define LLCP_PDU_RESERVED_1011  11
 #define LLCP_PDU_I_TYPE         12
 #define LLCP_PDU_RR_TYPE        13
@@ -66,7 +70,9 @@
 #define LLCP_PDU_RR_SIZE        3
 #define LLCP_PDU_RNR_SIZE       3
 #define LLCP_PDU_AGF_LEN_SIZE   2       /* 2 bytes of length in AGF PDU */
-
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#define LLCP_PDU_DPS_SIZE       78     /* 78 bytes of length in DPS PDU */
+#endif
 #define LLCP_SAP_DM_REASON_RESP_DISC            0x00
 #define LLCP_SAP_DM_REASON_NO_ACTIVE_CONNECTION 0x01
 #define LLCP_SAP_DM_REASON_NO_SERVICE           0x02
@@ -104,10 +110,22 @@
 #define LLCP_MIN_SNL_MAJOR_VERSION  0x01
 #define LLCP_MIN_SNL_MINOR_VERSION  0x01
 
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/* LLCP Version 1.3 */
+#define LLCP_VERSION_MAJOR  0x01
+#define LLCP_VERSION_MINOR  0x03
+#else
 /* LLCP Version 1.1 */
 #define LLCP_VERSION_MAJOR  0x01
 #define LLCP_VERSION_MINOR  0x01
+#endif
+
 #define LLCP_VERSION_VALUE  ((LLCP_VERSION_MAJOR << 4) | LLCP_VERSION_MINOR)
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/* ECPK and RN values for secure p2p */
+#define LLCP_ECPK_TYPE       0x0A
+#define LLCP_RN_TYPE         0x0B
+#endif
 
 /* Maximum Information Unit Extension */
 #define LLCP_MIUX_TYPE      0x02
@@ -168,6 +186,11 @@
 #define LLCP_LSC_2          0x02
 #define LLCP_LSC_3          0x03
 
+#if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
+/* Data Protection Class */
+#define LLCP_DPC_0          0x00
+#define LLCP_DPC_1          0x01
+#endif
 #define LLCP_MAGIC_NUMBER_LEN       3
 #define LLCP_MAGIC_NUMBER_BYTE0     0x46
 #define LLCP_MAGIC_NUMBER_BYTE1     0x66

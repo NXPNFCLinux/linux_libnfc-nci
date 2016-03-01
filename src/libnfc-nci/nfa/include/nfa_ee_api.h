@@ -437,10 +437,9 @@ NFC_API extern tNFA_STATUS NFA_EeAddAidRouting (tNFA_HANDLE          ee_handle,
                                                 UINT8               *p_aid,
                                                 tNFA_EE_PWR_STATE     power_state
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-                                                , UINT8              vs_info);
-#else
-)
+                                                , UINT8              vs_info
 #endif
+);
 
 /*******************************************************************************
 **

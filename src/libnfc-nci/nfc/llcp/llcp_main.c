@@ -32,6 +32,10 @@
 #include "llcp_defs.h"
 #include "nfc_int.h"
 
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+#include "nci_config.h"
+#endif
+
 #if (LLCP_DYNAMIC_MEMORY == FALSE)
 tLLCP_CB llcp_cb;
 #endif
@@ -49,6 +53,7 @@ tLLCP_CB llcp_cb;
 void llcp_init (void)
 {
     UINT32 pool_count;
+    UINT32 p2p_flag;
 
     memset (&llcp_cb, 0, sizeof (tLLCP_CB));
 
@@ -57,7 +62,15 @@ void llcp_init (void)
     LLCP_TRACE_DEBUG0 ("LLCP - llcp_init ()");
 
     llcp_cb.lcb.local_link_miu = (LLCP_MIU <= LLCP_MAX_MIU ? LLCP_MIU : LLCP_MAX_MIU);
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    GetNumValue(NAME_LLCP_SECURED_P2P_ENABLE, &p2p_flag, sizeof(p2p_flag));
+    if(p2p_flag)
+        llcp_cb.lcb.local_opt      = LLCP_LSC_3|(LLCP_DPC_1 << 2);
+    else
+        llcp_cb.lcb.local_opt       = LLCP_LSC_3;
+#else
     llcp_cb.lcb.local_opt      = LLCP_OPT_VALUE;
+#endif
     llcp_cb.lcb.local_wt       = LLCP_WAITING_TIME;
     llcp_cb.lcb.local_lto      = LLCP_LTO_VALUE;
 
@@ -166,7 +179,11 @@ void llcp_process_timeout (TIMER_LIST_ENT *p_tle)
     case NFC_TTYPE_LLCP_DELAY_FIRST_PDU:
             llcp_link_check_send_data ();
         break;
-
+#if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
+    case NFC_TTYPE_LLCP_DPS_PDU:
+         LLCP_TRACE_DEBUG0("dps pdu timeout");//need to be defined
+        break;
+#endif
     default:
         break;
     }
