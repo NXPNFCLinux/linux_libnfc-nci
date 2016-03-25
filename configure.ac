@@ -75,11 +75,11 @@ fi])
 
 AM_CONDITIONAL([LLCP1_3_ENABLED], [if [$llcp1_3]; then
 AC_MSG_NOTICE([LLCP1.3 support is enabled (secure P2P)])
-AM_CONDITIONAL([OPENSSLDIR_SET], [if ["${ac_cv_env_openssldir_set}" = "set"]; then
+if ["${ac_cv_env_openssldir_set}" = "set"]; then
 AC_MSG_NOTICE([openssldir path set])
 else
 AC_MSG_ERROR(path to openssldir not set (required when LLCP1.3 support is enabled))
-fi])
+fi
 else
 AC_MSG_NOTICE([LLCP1.3 support is disabled (no secure P2P)])
 fi])
