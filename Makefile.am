@@ -23,10 +23,14 @@ AM_CPPFLAGS += \
 endif
 	
 configdir = ${sysconfdir}
+pkgconfiglibdir = $(libdir)/pkgconfig
 
 if PN7120
 config_DATA = conf/PN7120/libnfc-brcm.conf conf/PN7120/libnfc-nxp.conf
 endif
+
+pkgconfiglib_DATA = \
+	libnfc-nci.pc
 
 LIBNFC_NCI_INCLUDE := \
 	src/libnfc-nci/include \

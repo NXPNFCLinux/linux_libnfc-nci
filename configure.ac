@@ -45,6 +45,7 @@ AC_CHECK_FUNCS([select])
 AC_CHECK_FUNCS([dlopen])
 
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([libnfc-nci.pc])
 
 AC_ARG_ENABLE([pn7120],
 [  --enable-pn7120    set chip version to PN7120],
