@@ -28,6 +28,10 @@ if PN7120
 config_DATA = conf/PN7120/libnfc-brcm.conf conf/PN7120/libnfc-nxp.conf
 endif
 
+if PN7150
+config_DATA = conf/PN7150/libnfc-brcm.conf conf/PN7150/libnfc-nxp.conf
+endif
+
 LIBNFC_NCI_INCLUDE := \
 	src/libnfc-nci/include \
 	src/libnfc-nci/gki/ulinux \
@@ -212,6 +216,11 @@ endif
 
 if PN7120
 libnfc_nci_linux_la_FLAGS += -DNFC_NXP_CHIP_TYPE=PN547C2 -DNXP_CHIP_NAME=\"pn7120\"
+libnfc_nci_linux_la_FLAGS += -DPH_NCI_NXP_HAL_ENABLE_FW_DOWNLOAD=FALSE
+endif
+
+if PN7150
+libnfc_nci_linux_la_FLAGS += -DNFC_NXP_CHIP_TYPE=PN548C2 -DNXP_CHIP_NAME=\"pn7150\"
 libnfc_nci_linux_la_FLAGS += -DPH_NCI_NXP_HAL_ENABLE_FW_DOWNLOAD=FALSE
 endif
 

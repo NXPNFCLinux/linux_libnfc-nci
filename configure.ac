@@ -46,6 +46,14 @@ AC_CHECK_FUNCS([dlopen])
 
 AC_CONFIG_FILES([Makefile])
 
+AC_ARG_ENABLE([pn7150],
+[  --enable-pn7150    set chip version to PN7150],
+[case "${enableval}" in
+  yes) pn7150=true ;;
+  no)  pn7150=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-pn7150]) ;;
+esac],[pn7150=false])
+
 AC_ARG_ENABLE([pn7120],
 [  --enable-pn7120    set chip version to PN7120],
 [case "${enableval}" in
@@ -66,6 +74,9 @@ esac],[llcp1_3=false])
 
 AM_CONDITIONAL([CHIP_SEL_NOK], [
 COUNT=0
+if [ "$pn7150" = "true" ]; then
+((COUNT++))
+fi
 if [ "$pn7120" = "true" ]; then
 ((COUNT++))
 fi
@@ -84,7 +95,9 @@ else
 AC_MSG_NOTICE([LLCP1.3 support is disabled (no secure P2P)])
 fi])
 
-AM_CONDITIONAL([CHIP_SEL_ONE], [if [$pn7120]; then
+AM_CONDITIONAL([CHIP_SEL_ONE], [if [$pn7150]; then
+AC_MSG_NOTICE([Selected chip type is PN7150])
+elif [$pn7120]; then
 AC_MSG_NOTICE([Selected chip type is PN7120])
 else
 AC_MSG_NOTICE([Selected chip type is PN7120])
@@ -92,6 +105,8 @@ pn7120=true
 fi])
 
 AM_CONDITIONAL([LLCP1_3],  [test x$llcp1_3  = xtrue])
+
+AM_CONDITIONAL([PN7150], [test x$pn7150 = xtrue])
 
 AM_CONDITIONAL([PN7120], [test x$pn7120 = xtrue])
 
