@@ -104,5 +104,8 @@ extern NFCSTATUS phDnldNfc_LoadRecInfo(void);
 extern NFCSTATUS phDnldNfc_LoadPKInfo(void);
 extern void phDnldNfc_CloseFwLibHandle(void);
 extern NFCSTATUS phDnldNfc_LoadFW(const char* pathName, uint8_t **pImgInfo, uint16_t* pImgInfoLen);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+extern NFCSTATUS phDnldNfc_LoadRecoveryFW (const char* pathName, uint8_t **pImgInfo, uint16_t* pImgInfoLen);
+#endif
 extern NFCSTATUS phDnldNfc_UnloadFW(void);
 #endif /* PHDNLDNFC_H */

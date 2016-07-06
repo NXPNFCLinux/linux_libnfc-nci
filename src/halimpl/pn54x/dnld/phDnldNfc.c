@@ -28,6 +28,9 @@
 static void *pFwLibHandle; /* Global firmware lib handle used in this file only */
 uint16_t wMwVer = 0; /* Middleware version no */
 uint16_t wFwVer = 0; /* Firmware version no */
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+ uint8_t gRecFWDwnld; // flag set to true to indicate dummy FW download
+#endif
 static pphDnldNfc_DlContext_t gpphDnldContext = NULL; /* Download contex */
 static pphDnldNfc_RspCb_t      UserCb; /* Upper layer call back function */
 static void*                   UserCtxt; /* Pointer to upper layer context */
@@ -869,7 +872,12 @@ NFCSTATUS phDnldNfc_InitImgInfo(void)
     phDnldNfc_SetHwDevHandle();
 
     /* load the library and get the image info pointer */
-    wStatus = phDnldNfc_LoadFW(FW_LIB_PATH, &pImageInfo, &ImageInfoLen);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+    if (gRecFWDwnld == TRUE)
+        wStatus = phDnldNfc_LoadRecoveryFW (FW_LIB_PATH, &pImageInfo, &ImageInfoLen);
+    else
+#endif
+        wStatus = phDnldNfc_LoadFW (FW_LIB_PATH, &pImageInfo, &ImageInfoLen);
 
     NXPLOG_FWDNLD_D("FW Image Length - ImageInfoLen %d",ImageInfoLen);
     NXPLOG_FWDNLD_D("FW Image Info Pointer - pImageInfo %x",(uintptr_t)pImageInfo);
@@ -940,7 +948,12 @@ NFCSTATUS phDnldNfc_LoadRecInfo(void)
     /* if memory is not allocated then allocate memory for donwload context structure */
     phDnldNfc_SetHwDevHandle();
 
-    wStatus = phDnldNfc_LoadFW(PLATFORM_LIB_PATH, &pImageInfo, &ImageInfoLen);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+    if (gRecFWDwnld == TRUE)
+        wStatus = phDnldNfc_LoadRecoveryFW (PLATFORM_LIB_PATH, &pImageInfo, &ImageInfoLen);
+    else
+#endif
+        wStatus = phDnldNfc_LoadFW (PLATFORM_LIB_PATH, &pImageInfo, &ImageInfoLen);
 
     if((pImageInfo == NULL) || (ImageInfoLen == 0))
     {
@@ -997,8 +1010,12 @@ NFCSTATUS phDnldNfc_LoadPKInfo(void)
     phDnldNfc_SetHwDevHandle();
 
     /* load the PKU image library */
-    wStatus = phDnldNfc_LoadFW(PKU_LIB_PATH, &pImageInfo, &ImageInfoLen);
-
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+    if (gRecFWDwnld == TRUE)
+        wStatus = phDnldNfc_LoadRecoveryFW (PKU_LIB_PATH, &pImageInfo, &ImageInfoLen);
+    else
+#endif
+        wStatus = phDnldNfc_LoadFW (PKU_LIB_PATH, &pImageInfo, &ImageInfoLen);
     if((pImageInfo == NULL) || (ImageInfoLen == 0))
     {
         NXPLOG_FWDNLD_E("Image extraction Failed - invalid imginfo or imginfolen!!");
@@ -1166,6 +1183,75 @@ NFCSTATUS phDnldNfc_UnloadFW(void)
 
     return wStatus;
 }
+
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+/*******************************************************************************
+**
+** Function         phDnldNfc_LoadRecoveryFW
+**
+** Description      Load the dummy firmware version form firmware lib for recovery
+**                  This will change the FW version of the NFCC firmware
+**                  and enable flashing of firmware of same version.
+**
+** Parameters       pathName    - Firmware image path
+**                  pImgInfo    - Firmware image handle
+**                  pImgInfoLen - Firmware image length
+**
+** Returns          NFCSTATUS
+**
+*******************************************************************************/
+NFCSTATUS phDnldNfc_LoadRecoveryFW (const char* pathName, uint8_t **pImgInfo, uint16_t* pImgInfoLen)
+{
+    void* pImageInfo = NULL;
+    void* pImageInfoLen = NULL;
+
+    /* check for path name */
+    if (pathName == NULL)
+    {
+        pathName = "/system/vendor/firmware/libpn548ad_fw.so";
+    }
+
+    /* check if the handle is not NULL then free the library */
+    if (pFwLibHandle != NULL)
+    {
+        phDnldNfc_UnloadFW ();
+        pFwLibHandle = NULL;
+    }
+    /* load the DLL file */
+    pFwLibHandle = dlopen (pathName, RTLD_LAZY);
+    NXPLOG_FWDNLD_D ("phDnldNfc_LoadRecoveryFW %s ", pathName);
+
+    /* if library load failed then handle will be NULL */
+    if (pFwLibHandle == NULL)
+    {
+        NXPLOG_FWDNLD_E("NULL handler : unable to load the library file, specify correct path");
+        return NFCSTATUS_FAILED;
+    }
+
+    dlerror ();    /* Clear any existing error */
+
+    /* load the address of download image pointer and image size */
+    pImageInfo =  (void*)dlsym (pFwLibHandle, "gphDnldNfc_DummyDlSeq");
+
+    if (dlerror() || (NULL == pImageInfo))
+    {
+        NXPLOG_FWDNLD_E ("Problem loading symbol : gphDnldNfc_DummyDlSeq");
+        return NFCSTATUS_FAILED;
+    }
+
+    (*pImgInfo) = (*(uint8_t**)pImageInfo);
+    pImageInfoLen  = (void*)dlsym (pFwLibHandle, "gphDnldNfc_DlSeqDummyFwSz");
+    if (dlerror() ||(NULL == pImageInfoLen))
+    {
+       NXPLOG_FWDNLD_E ("Problem loading symbol : gphDnldNfc_DlSeqDummyFwSz");
+       return NFCSTATUS_FAILED;
+    }
+
+    (*pImgInfoLen) = (uint16_t)(*((uint16_t*)pImageInfoLen));
+
+    return NFCSTATUS_SUCCESS;
+}
+#endif
 
 #ifdef EEPROM_Read_Mem_IMP
 /*******************************************************************************

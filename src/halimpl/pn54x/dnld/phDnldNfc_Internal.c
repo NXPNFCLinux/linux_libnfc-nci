@@ -275,6 +275,8 @@ static void phDnldNfc_ProcessSeqState(void *pContext, phTmlNfc_TransactInfo_t *p
                         (pphTmlNfc_TransactCompletionCb_t)&phDnldNfc_ProcessSeqState,
                         (void *)pDlCtxt);
 
+                    /* set read status to pDlCtxt->wCmdSendStatus to enable callback */
+                    pDlCtxt->wCmdSendStatus = wStatus;
                     break;
                 }
                 else
@@ -454,6 +456,8 @@ static void phDnldNfc_ProcessRWSeqState(void *pContext, phTmlNfc_TransactInfo_t 
                         (pphTmlNfc_TransactCompletionCb_t)&phDnldNfc_ProcessRWSeqState,
                         (void *)pDlCtxt);
 
+                    /* set read status to pDlCtxt->wCmdSendStatus to enable callback */
+                    pDlCtxt->wCmdSendStatus = wStatus;
                     break;
                 }
                 else
@@ -1232,12 +1236,12 @@ static NFCSTATUS phDnldNfc_UpdateRsp(pphDnldNfc_DlContext_t   pDlContext, phTmlN
             }
             else if(PH_DL_STATUS_FIRMWARE_VERSION_ERROR == (pInfo->pBuff[PHDNLDNFC_FRAMESTATUS_OFFSET]))
             {
-                NXPLOG_FWDNLD_E("Firmware Already Up To Date!!");
+                NXPLOG_FWDNLD_E("FW version Error !!!could be either due to FW major version mismatch or Firmware Already Up To Date !!");
                 (pDlContext->tRWInfo.bFirstWrReq) = FALSE;
                 /* resetting wRemBytes to 0 to avoid any further write frames send */
                 (pDlContext->tRWInfo.wRemBytes) = 0;
                 (pDlContext->tRWInfo.wOffset) = 0;
-                wStatus = NFCSTATUS_SUCCESS;
+                wStatus = NFCSTATUS_FW_VERSION_ERROR;
             }
             else if(PH_DL_STATUS_PLL_ERROR == (pInfo->pBuff[PHDNLDNFC_FRAMESTATUS_OFFSET]))
             {

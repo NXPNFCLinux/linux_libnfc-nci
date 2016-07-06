@@ -54,6 +54,10 @@ extern uint16_t wFwVer;
 extern int send_to_upper_kovio;
 extern int kovio_detected;
 extern int disable_kovio;
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+extern uint8_t gRecFWDwnld;
+static uint8_t gRecFwRetryCount; //variable to hold dummy FW recovery count
+#endif
 static uint8_t Rx_data[NCI_MAX_DATA_LEN];
 
 uint32_t timeoutTimerId = 0;
@@ -82,7 +86,13 @@ static NFCSTATUS phNxpNciHal_CheckValidFwVersion(void);
 static void phNxpNciHal_enable_i2c_fragmentation();
 NFCSTATUS phNxpNciHal_check_clock_config(void);
 NFCSTATUS phNxpNciHal_china_tianjin_rf_setting(void);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+static NFCSTATUS phNxpNciHalRFConfigCmdRecSequence ();
+static NFCSTATUS phNxpNciHal_CheckRFCmdRespStatus ();
+#endif
+
 int  check_config_parameter();
+
 /******************************************************************************
  * Function         phNxpNciHal_client_thread
  *
@@ -323,6 +333,12 @@ static NFCSTATUS phNxpNciHal_CheckValidFwVersion(void)
             NXPLOG_NCIHAL_D("Firmware download not allowed (NXP_FW_PROTECION_OVERRIDE not defiend)");
         }
     }
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+    else if (gRecFWDwnld == TRUE)
+    {
+        status = NFCSTATUS_SUCCESS;
+    }
+#endif
     else if (wFwVerRsp == 0)
     {
         NXPLOG_NCIHAL_E("FW Version not received by NCI command >>> Force Firmware download");
@@ -969,6 +985,9 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params)
      int temp_fix = 1;
 #if(NFC_NXP_CHIP_TYPE == PN548C2)
     unsigned long num = 0;
+    //initialize dummy FW recovery variables
+    gRecFwRetryCount = 0;
+    gRecFWDwnld = 0;
 #endif
     // recovery --start
     /*NCI_INIT_CMD*/
@@ -983,7 +1002,10 @@ int phNxpNciHal_core_initialized(uint8_t* p_core_init_rsp_params)
 retry_core_init:
         config_access = FALSE;
         if(buffer != NULL)
+        {
             free(buffer);
+            buffer = NULL;
+        }
         if(retry_core_init_cnt > 3)
         {
             return NFCSTATUS_FAILED;
@@ -1165,11 +1187,28 @@ retry_core_init:
         }
 #endif
         retlen = 0;
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+        config_access = FALSE;
+#endif
         NXPLOG_NCIHAL_D ("Performing RF Settings BLK 1");
         isfound = GetNxpByteArrayValue(NAME_NXP_RF_CONF_BLK_1, (char *) buffer,
                 bufflen, &retlen);
         if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 1 failed");
                 retry_core_init_cnt++;
@@ -1183,6 +1222,20 @@ retry_core_init:
                 bufflen, &retlen);
         if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 2 failed");
                 retry_core_init_cnt++;
@@ -1196,6 +1249,20 @@ retry_core_init:
                 bufflen, &retlen);
         if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 3 failed");
                 retry_core_init_cnt++;
@@ -1209,6 +1276,20 @@ retry_core_init:
                 bufflen, &retlen);
         if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 4 failed");
                 retry_core_init_cnt++;
@@ -1222,6 +1303,20 @@ retry_core_init:
                 bufflen, &retlen);
         if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 5 failed");
                 retry_core_init_cnt++;
@@ -1235,6 +1330,20 @@ retry_core_init:
                 bufflen, &retlen);
         if (retlen > 0) {
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("RF Settings BLK 6 failed");
                 retry_core_init_cnt++;
@@ -1242,6 +1351,9 @@ retry_core_init:
             }
         }
         retlen = 0;
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+        config_access = TRUE;
+#endif
 
         NXPLOG_NCIHAL_D ("Performing NAME_NXP_CORE_CONF_EXTN Settings");
         isfound = GetNxpByteArrayValue(NAME_NXP_CORE_CONF_EXTN,
@@ -1271,18 +1383,39 @@ retry_core_init:
         }
 
         retlen = 0;
-
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+        config_access = FALSE;
+#endif
         isfound = GetNxpByteArrayValue(NAME_NXP_CORE_RF_FIELD,
                 (char *) buffer, bufflen, &retlen);
         if (retlen > 0) {
             /* NXP ACT Proprietary Ext */
             status = phNxpNciHal_send_ext_cmd(retlen, buffer);
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                status = phNxpNciHal_CheckRFCmdRespStatus ();
+                /*STATUS INVALID PARAM 0x09*/
+                if (status == 0x09)
+                {
+                    phNxpNciHalRFConfigCmdRecSequence ();
+                    retry_core_init_cnt++;
+                    goto retry_core_init;
+                }
+            }
+            else
+#endif
             if (status != NFCSTATUS_SUCCESS) {
                 NXPLOG_NCIHAL_E("Setting NXP_CORE_RF_FIELD status failed");
                 retry_core_init_cnt++;
                 goto retry_core_init;
             }
         }
+
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+        config_access = TRUE;
+#endif
+
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
         retlen = 0;
 
@@ -1551,8 +1684,14 @@ retry_core_init:
     if(buffer)
     {
         free(buffer);
+        buffer = NULL;
     }
 
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+    //initialize dummy FW recovery variables
+    gRecFWDwnld = 0;
+    gRecFwRetryCount = 0;
+#endif
     if(!((*p_core_init_rsp_params > 0) && (*p_core_init_rsp_params < 4)))
         phNxpNciHal_core_initialized_complete(status);
     else
@@ -1576,6 +1715,98 @@ invoke_callback:
 #endif
     return NFCSTATUS_SUCCESS;
 }
+
+#if(NFC_NXP_CHIP_TYPE == PN548C2)
+/******************************************************************************
+ * Function         phNxpNciHal_CheckRFCmdRespStatus
+ *
+ * Description      This function is called to check the resp status of
+ *                  RF update commands.
+ *
+ * Returns          NFCSTATUS_SUCCESS           if successful,
+ *                  NFCSTATUS_INVALID_PARAMETER if parameter is inavlid
+ *                  NFCSTATUS_FAILED            if failed response
+ *
+ ******************************************************************************/
+NFCSTATUS phNxpNciHal_CheckRFCmdRespStatus ()
+{
+    NFCSTATUS status = NFCSTATUS_SUCCESS;
+    static uint16_t INVALID_PARAM = 0x09;
+    if ((nxpncihal_ctrl.rx_data_len > 0) && (nxpncihal_ctrl.p_rx_data[2] > 0))
+    {
+        if (nxpncihal_ctrl.p_rx_data[3] == 0x09)
+        {
+            status = INVALID_PARAM;
+        }
+        else if (nxpncihal_ctrl.p_rx_data[3] != NFCSTATUS_SUCCESS)
+        {
+            status = NFCSTATUS_FAILED;
+        }
+    }
+    return status;
+}
+
+/******************************************************************************
+ * Function         phNxpNciHalRFConfigCmdRecSequence
+ *
+ * Description      This function is called to handle dummy FW recovery sequence
+ *                  Whenever RF settings are failed to apply with invalid param
+ *                  response, recovery mechanism includes dummy firmware download
+ *                  followed by firmware download and then config settings. The dummy
+ *                  firmware changes the major number of the firmware inside NFCC.
+ *                  Then actual firmware dowenload will be successful. This can be
+ *                  retried maximum three times.
+ *
+ * Returns          Always returns NFCSTATUS_SUCCESS
+ *
+ ******************************************************************************/
+NFCSTATUS phNxpNciHalRFConfigCmdRecSequence ()
+{
+    NFCSTATUS status = NFCSTATUS_SUCCESS;
+    uint16_t recFWState = 1;
+    gRecFWDwnld = TRUE;
+    gRecFwRetryCount++;
+    if (gRecFwRetryCount > 0x03)
+    {
+        NXPLOG_NCIHAL_D ("Max retry count for RF config FW recovery exceeded ");
+        gRecFWDwnld = FALSE;
+        return NFCSTATUS_FAILED;
+    }
+    do {
+        status = phTmlNfc_IoCtl (phTmlNfc_e_ResetDevice);
+        phDnldNfc_InitImgInfo ();
+        if (NFCSTATUS_SUCCESS == phNxpNciHal_CheckValidFwVersion ())
+        {
+            fw_download_success = 0;
+            status = phNxpNciHal_fw_download ();
+            if (status == NFCSTATUS_SUCCESS)
+            {
+                fw_download_success = 1;
+                status = phTmlNfc_Read(
+                    nxpncihal_ctrl.p_cmd_data,
+                    NCI_MAX_DATA_LEN,
+                    (pphTmlNfc_TransactCompletionCb_t) &phNxpNciHal_read_complete,
+                    NULL);
+                if (status != NFCSTATUS_PENDING)
+                {
+                    NXPLOG_NCIHAL_E ("TML Read status error status = %x", status);
+                    phTmlNfc_Shutdown ();
+                    status = NFCSTATUS_FAILED;
+                    break;
+                }
+            }
+            else
+            {
+                status = NFCSTATUS_FAILED;
+                break;
+            }
+        }
+        gRecFWDwnld = FALSE;
+    }while (recFWState--);
+    gRecFWDwnld = FALSE;
+    return status;
+}
+#endif
 
 /******************************************************************************
  * Function         phNxpNciHal_core_initialized_complete

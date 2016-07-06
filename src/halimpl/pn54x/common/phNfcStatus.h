@@ -183,6 +183,14 @@
 #define NFCSTATUS_NOT_ALLOWED                                 (0x003A)
 
 /*
+ * FW version error while performing FW download,
+ * FW major version mismatch (cannot downgrade FW major version) or FW version already upto date
+ * User may be trying to flash Mobile FW on top of Infra FW, which is not allowed
+ * Download appropriate version of FW
+ */
+#define NFCSTATUS_FW_VERSION_ERROR                            (0x003C)
+
+/*
  *  The system is busy with the previous operation.
  */
 #define NFCSTATUS_BUSY                                        (0x006F)

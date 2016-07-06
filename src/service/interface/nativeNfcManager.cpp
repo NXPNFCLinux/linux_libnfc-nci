@@ -1575,8 +1575,8 @@ void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
  #if(NXP_NFC_NATIVE_ENABLE_HCE ==  TRUE)
                 if (enable_host_routing && FLAG_HCE_ENABLE_HCE)
                 {
-		    NXPLOG_API_D ("Host Card Emulation Enabled");
-                    RoutingManager::getInstance().enableRoutingToHost(enable_host_routing & FLAG_HCE_SKIP_NDEF_CHECK);
+                   NXPLOG_API_D ("Host Card Emulation Enabled");
+                   RoutingManager::getInstance().enableRoutingToHost(enable_host_routing & FLAG_HCE_SKIP_NDEF_CHECK);
                 }
                 else
 #endif
@@ -1590,7 +1590,19 @@ void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
     {
         // No technologies configured, stop polling
         stopPolling_rfDiscoveryDisabled();
-    }
+
+ #if(NXP_NFC_NATIVE_ENABLE_HCE ==  TRUE)
+        if (enable_host_routing && FLAG_HCE_ENABLE_HCE)
+        {
+               NXPLOG_API_D ("Host Card Emulation Enabled");
+               RoutingManager::getInstance().enableRoutingToHost(enable_host_routing & FLAG_HCE_SKIP_NDEF_CHECK);
+        }
+        else
+#endif
+        {
+               RoutingManager::getInstance().disableRoutingToHost();
+        }
+	}
 
     // Start P2P listening if tag polling was enabled or the mask was 0.
     if (sDiscoveryEnabled || (tech_mask == 0))

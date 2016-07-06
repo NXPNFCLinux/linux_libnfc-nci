@@ -98,6 +98,12 @@ bool RoutingManager::initialize ()
         NXPLOG_API_E ("%s:NXP_FWD_FUNCTIONALITY_ENABLE=%d;", __FUNCTION__, mFwdFuntnEnable);
     }
 
+    if ((GetNumValue(NAME_HOST_LISTEN_ENABLE, &tech, sizeof(tech))))
+    {
+        mHostListnEnable = tech;
+        NXPLOG_API_E ("%s:HOST_LISTEN_ENABLE=%d;", __FUNCTION__, mHostListnEnable);
+    }
+
     tNFA_STATUS nfaStat;
     {
         SyncEventGuard guard (mEeRegisterEvent);

@@ -8,7 +8,7 @@ Further details about the stack [here](https://github.com/NXPNFCLinux/linux_libn
 
 Release version
 ---------------
-R2.1 includes support for PN7150 NFC Controller IC
+R2.1 includes support for PN7150 NFC Controller IC and some bug fixes (refer to the [documentation](https://github.com/NXPNFCLinux/linux_libnfc-nci/blob/master/doc/AN11697%20-%20PN71x0%20Linux%20Software%20Stack%20Integration%20Guidelines.pdf) for more details).
 
 R2.0 includes LLCP1.3 support and some bug fixes (refer to the [documentation](https://github.com/NXPNFCLinux/linux_libnfc-nci/blob/master/doc/AN11697%20-%20PN71x0%20Linux%20Software%20Stack%20Integration%20Guidelines.pdf) for more details).
 

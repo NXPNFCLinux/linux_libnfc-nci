@@ -30,6 +30,7 @@
 
 #if(NFC_NXP_LLCP_SECURED_P2P == TRUE)
 #include "cipher.h"
+
 void cipher_init()
 {
 
