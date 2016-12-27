@@ -23,6 +23,8 @@
 #include "linux_nfc_api.h"
 #include "tools.h"
 
+#define CUSTOM_SET_READER_ONLY_MODE 1
+
 typedef enum eDevState
 {
 	eDevState_NONE,
@@ -675,7 +677,11 @@ int InitMode(int tag, int p2p, int hce)
 	if(0x00 == res)
 	{
 
+#if ! CUSTOM_SET_READER_ONLY_MODE
 		nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, hce, 0);
+#else
+		nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 1, 0, 0);
+#endif
 
 		if(0x01 == p2p)
 		{
