@@ -26,6 +26,9 @@
 #include <phNxpConfig.h>
 #include <phNxpNciHal_NfcDepSWPrio.h>
 #include <phNxpNciHal_Kovio.h>
+
+#define CUSTOM_HANDLING_NO_DEVICE 1
+
 /*********************** Global Variables *************************************/
 #define PN547C2_CLOCK_SETTING
 #undef  PN547C2_FACTORY_RESET_DEBUG
@@ -916,6 +919,22 @@ static void phNxpNciHal_read_complete(void *pContext, phTmlNfc_TransactInfo_t *p
                     nxpncihal_ctrl.rx_data_len, nxpncihal_ctrl.p_rx_data);
         }
     }
+#if CUSTOM_HANDLING_NO_DEVICE
+    else if (pInfo->wStatus == NFCSTATUS_BOARD_COMMUNICATION_ERROR)
+    {
+        NXPLOG_NCIHAL_E("read COM error status = 0x%x", pInfo->wStatus);
+        if (nxpncihal_ctrl.p_nfc_stack_cback != NULL)
+        {
+            /* inform upper layer: */
+            (* nxpncihal_ctrl.p_nfc_stack_cback)(HAL_NFC_ERROR_EVT,
+                HAL_NFC_STATUS_ERR_CMD_TIMEOUT);
+        }
+        /* do not call phTmlNfc_Read() for pending request (see later),
+           otherwise it may create an infinite loop if NFC device is not
+           plugged... */
+        return;
+    }
+#endif
     else
     {
         NXPLOG_NCIHAL_E("read error status = 0x%x", pInfo->wStatus);
