@@ -1,0 +1,15 @@
+config NFC_NXP_PN5XX_STUB
+	tristate "NXP PN5XX based stub driver"
+	depends on I2C
+	select CRC_CCITT
+	default n
+	---help---
+	  NXP PN5XX stub driver for testing purpose (applications based on libnfc-nci)
+	  This is a stub driver to PN5xx NFC Controller devices, removing i2c bus access,
+	  used to run on computer for error handling in libnfc-nci.
+	  EXAMPLE: simulate case when NFC device is not plugged (=> libnfc-nci R2.1
+	  executes 2 infinite loops in i2c read thread)
+
+	  To compile this driver as a module, choose m here. The module will
+	  be called pn5xx_i2c_stub.
+	  Say N if unsure.
