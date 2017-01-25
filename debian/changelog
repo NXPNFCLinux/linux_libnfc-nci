@@ -1,0 +1,29 @@
+libnfc-nci (2.1+1) stable; urgency=low
+
+  * Update.
+
+ -- unknown <un@kn.own>  Wed, 06 Jul 2016 23:59:59 +0000
+
+libnfc-nci (2.1) stable; urgency=low
+
+  * Update.
+
+ -- unknown <un@kn.own>  Mon, 09 May 2016 23:59:59 +0000
+
+libnfc-nci (2.0) stable; urgency=low
+
+  * Update.
+
+ -- unknown <un@kn.own>  Tue, 01 Mar 2016 23:59:59 +0000
+
+libnfc-nci (1.0) stable; urgency=low
+
+  * Update.
+
+ -- unknown <un@kn.own>  Thu, 27 Aug 2015 23:59:59 +0000
+
+libnfc-nci (0.4) stable; urgency=low
+
+  * Initial Release.
+
+ -- unknown <un@kn.own>  Fri, 05 Jun 2015 23:59:59 +0000

@@ -1,0 +1,41 @@
+Source: libnfc-nci
+Priority: optional
+Maintainer: unknown <un@kn.own>
+Build-Depends: debhelper (>= 9), dh-autoreconf
+Standards-Version: 3.9.6
+Section: libs
+Homepage: https://github.com/NXPNFCLinux/linux_libnfc-nci
+Vcs-Git: https://github.com/NXPNFCLinux/linux_libnfc-nci.git
+Vcs-Browser: https://github.com/NXPNFCLinux/linux_libnfc-nci
+
+Package: libnfc-nci-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libnfc-nci (= ${binary:Version}), ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: libnfc-nci
+Architecture: any
+Multi-Arch: same
+Depends: libnfc-nci-data (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: libnfc-nci-data
+Section: libs
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: libnfc-nci-demo
+Section: utils
+Architecture: any
+Multi-Arch: same
+Depends: libnfc-nci (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
