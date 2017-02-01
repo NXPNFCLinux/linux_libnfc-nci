@@ -1090,7 +1090,7 @@ static BOOLEAN rw_t4t_validate_cc_file (void)
     }
 
     if (  (p_t4t->cc_file.ndef_fc.write_access != T4T_FC_WRITE_ACCESS)
-        &&(p_t4t->cc_file.ndef_fc.write_access != T4T_FC_NO_WRITE_ACCESS)  )
+        &&(p_t4t->cc_file.ndef_fc.write_access & 0xF0)  )
     {
         RW_TRACE_ERROR1 ("rw_t4t_validate_cc_file (): Write Access (0x%02X) is invalid",
                           p_t4t->cc_file.ndef_fc.write_access);
