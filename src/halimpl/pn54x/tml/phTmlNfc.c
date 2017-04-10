@@ -25,6 +25,13 @@
 #include <phTmlNfc_i2c.h>
 #include <phNxpNciHal_utils.h>
 
+#define CUSTOM_HANDLING_NO_DEVICE 1
+#if CUSTOM_HANDLING_NO_DEVICE
+# define CUSTOM_MAX_READ_ERROR_BEFORE_ABORT 100
+static uint8_t s_customReadErrCounter = 0;
+#endif
+
+
 /*
  * Duration of Timer to wait after sending an Nci packet
  */
@@ -364,10 +371,59 @@ static void phTmlNfc_TmlThread(void *pParam)
                 if (-1 == dwNoBytesWrRd)
                 {
                     NXPLOG_TML_E("PN54X - Error in I2C Read.....\n");
+#if ! CUSTOM_HANDLING_NO_DEVICE
                     sem_post(&gpphTmlNfc_Context->rxSemaphore);
+#else
+                    s_customReadErrCounter++;
+                    if (s_customReadErrCounter <= CUSTOM_MAX_READ_ERROR_BEFORE_ABORT)
+                    {
+                        // self re-execution => retry:
+                        sem_post(&gpphTmlNfc_Context->rxSemaphore);
+                    }
+                    else // aborting
+                    {
+                        s_customReadErrCounter = 0; // reset counter
+                        printf("CUSTOM> too many i2c read errors: ABORTING...\n");
+                        // XXX: similar code than nominal case, but with FAIL status (see later)
+                        gpphTmlNfc_Context->tReadInfo.bEnable = 0;
+                        if ((phTmlNfc_e_EnableRetrans == gpphTmlNfc_Context->eConfig) &&
+                                (0x00 != (gpphTmlNfc_Context->tReadInfo.pBuffer[0] & 0xE0)))
+                        {
+                            /* Stop Timer to prevent Retransmission */
+                            uint32_t timerStatus = phOsalNfc_Timer_Stop(gpphTmlNfc_Context->dwTimerId);
+                            if (NFCSTATUS_SUCCESS != timerStatus)
+                            {
+                                NXPLOG_TML_E("PN54X - timer stopped returned failure.....\n");
+                            }
+                            else
+                            {
+                                gpphTmlNfc_Context->bWriteCbInvoked = FALSE;
+                            }
+                        }
+                        gpphTmlNfc_Context->tReadInfo.wLength = 0; /* no data */
+                        dwNoBytesWrRd = PH_TMLNFC_RESET_VALUE;
+
+                        /* Fill the Transaction info structure to be passed to Callback Function */
+                        tTransactionInfo.wStatus = NFCSTATUS_BOARD_COMMUNICATION_ERROR;
+                        tTransactionInfo.pBuff = gpphTmlNfc_Context->tReadInfo.pBuffer;
+                        tTransactionInfo.wLength = gpphTmlNfc_Context->tReadInfo.wLength;
+
+                        /* Prepare the message to be posted on User thread */
+                        tDeferredInfo.pCallback = &phTmlNfc_ReadDeferredCb;
+                        tDeferredInfo.pParameter = &tTransactionInfo;
+                        tMsg.eMsgType = PH_LIBNFC_DEFERREDCALL_MSG;
+                        tMsg.pMsgData = &tDeferredInfo;
+                        tMsg.Size = sizeof(tDeferredInfo);
+                        NXPLOG_TML_D("PN54X - Posting read FAIL message.....\n");
+                        phTmlNfc_DeferredCall(gpphTmlNfc_Context->dwCallbackThreadId, &tMsg);
+                    }
+#endif
                 }
                 else
                 {
+#if CUSTOM_HANDLING_NO_DEVICE
+                    s_customReadErrCounter = 0; // reset counter
+#endif
                     memcpy(gpphTmlNfc_Context->tReadInfo.pBuffer, temp, dwNoBytesWrRd);
 
                     NXPLOG_TML_D("PN54X - I2C Read successful.....\n");

@@ -1,0 +1,17 @@
+Example:
+
+&i2c{
+
+	status = "okay";
+
+	pn547: pn547@29 {
+
+		compatible = "nxp,pn547";
+
+		reg = <0x29>;
+		clock-frequency = <400000>;
+
+		interrupt-gpios = <&gpio2 17 0>;
+		enable-gpios = <&gpio4 21 0>;
+	};
+};
