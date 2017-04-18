@@ -3,10 +3,10 @@ lib_LTLIBRARIES = libnfc_nci_linux.la
 sbin_PROGRAMS = nfcDemoApp 
 nfcDemoApp_DEPENDENCIES = libnfc_nci_linux.la
 
-LDFLAGS = -Bstatic 
+AM_LDFLAGS = $(LDFLAGS) -Bstatic
 
 if LLCP1_3
-LDFLAGS += -L$(openssldir)/lib -lcrypto -lssl
+AM_LDFLAGS += -L$(openssldir)/lib -lcrypto -lssl
 endif
 
 nfcDemoApp_FLAGS = -I$(srcdir)/demoapp -I$(srcdir)/src/include 
@@ -225,7 +225,7 @@ libnfc_nci_linux_la_FLAGS += -DPH_NCI_NXP_HAL_ENABLE_FW_DOWNLOAD=FALSE
 endif
 
 libnfc_nci_linux_la_LIBADD = $(AC_LIBOBJS)
-libnfc_nci_linux_la_LDFLAGS :=
+libnfc_nci_linux_la_LDFLAGS := $(LDFLAGS)
 libnfc_nci_linux_la_LDFLAGS +=-DPN547C2=1
 libnfc_nci_linux_la_LDFLAGS +=-DPN548C2=2
 libnfc_nci_linux_la_LDFLAGS +=-DPN551C2=3
