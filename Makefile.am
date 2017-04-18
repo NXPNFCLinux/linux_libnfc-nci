@@ -229,7 +229,7 @@ libnfc_nci_linux_la_LDFLAGS :=
 libnfc_nci_linux_la_LDFLAGS +=-DPN547C2=1
 libnfc_nci_linux_la_LDFLAGS +=-DPN548C2=2
 libnfc_nci_linux_la_LDFLAGS +=-DPN551C2=3
-libnfc_nci_linux_la_LDFLAGS += -shared -pthread -ldl -lrt -fPIC -release 1 -versionnfo 0:0:0
+libnfc_nci_linux_la_LDFLAGS += -shared -pthread -ldl -lrt -fPIC -release 1 -version-info 0:0:0
 
 nfcDemoApp_LDFLAGS = -pthread -ldl -lrt -lnfc_nci_linux
 
