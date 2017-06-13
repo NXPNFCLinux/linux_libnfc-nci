@@ -93,6 +93,7 @@ static SyncEvent    sNfaVSCResponseEvent;
 static SyncEvent    sNfaVSCNotificationEvent;
 static SyncEvent    sReadEvent;
 static BOOLEAN         sIsTagPresent = TRUE;
+static BOOLEAN         sPresCheckRequired = TRUE;
 static BOOLEAN         sIsTagInField;
 static BOOLEAN         sVSCRsp;
 static BOOLEAN         sReconnectFlag = FALSE;
@@ -468,9 +469,16 @@ static void *presenceCheckThread(void *arg)
     while(sIsTagPresent)
     {
         gSyncMutex.lock();
-        sIsTagPresent = doPresenceCheck();
+        if(sPresCheckRequired)
+        {
+            sIsTagPresent = doPresenceCheck();
+        }
+        else
+        {
+            sPresCheckRequired = TRUE;
+        }
         gSyncMutex.unlock();
-        usleep(50000);
+        usleep(DEFAULT_PRESENCE_CHECK_DELAY);
     }
     doDisconnect ();
     if(!NfcTag::getInstance().mNfcDisableinProgress)
@@ -870,6 +878,9 @@ void nativeNfcTag_doReadCompleted (tNFA_STATUS status)
 void nativeNfcTag_doTransceiveStatus (tNFA_STATUS status, UINT8* buf, UINT32 bufLen)
 {
     UINT32 handle = sCurrentConnectedHandle;
+
+    sPresCheckRequired = FALSE;
+    
     SyncEventGuard g (sTransceiveEvent);
     NXPLOG_API_D ("%s: data len=%d", __FUNCTION__, bufLen);
     if (NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_MIFARE)
@@ -1297,7 +1308,15 @@ void nativeNfcTag_doCheckNdefResult (tNFA_STATUS status, UINT32 maxSize, UINT32 
         if ((flags & RW_NDEF_FL_UNKNOWN) == 0) //if stack understands the tag
         {
             if (flags & RW_NDEF_FL_SUPPORTED) //if tag is ndef capable
+            {
                 sCheckNdefCapable = TRUE;
+                sCheckNdefMaxSize = maxSize;
+            }
+        }
+        else
+        {
+            sCheckNdefCapable = TRUE;
+            sCheckNdefMaxSize = maxSize;
         }
     }
     else
@@ -1307,6 +1326,7 @@ void nativeNfcTag_doCheckNdefResult (tNFA_STATUS status, UINT32 maxSize, UINT32 
         sCheckNdefCurrentSize = 0;
         sCheckNdefCardReadOnly = FALSE;
     }
+    NXPLOG_API_D ("%s:end %d, %d, %d\n)", __FUNCTION__, sCheckNdefStatus, sCheckNdefCapable, sCheckNdefMaxSize);
     sem_post (&sCheckNdefSem);
 }
 
@@ -1660,25 +1680,27 @@ INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength
     NXPLOG_API_D ("%s: enter; len = %zu", __FUNCTION__, dataLength);
     if (tagHandle != sCurrentConnectedHandle)
     {
-        NXPLOG_API_E ("%s: Wrong tag handle!\n)", __FUNCTION__);
+        NXPLOG_API_D ("%s: Wrong tag handle!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
-    if (sCheckNdefCapable && sCheckNdefMaxSize < dataLength)
+    if (sCheckNdefCapable && (sCheckNdefMaxSize < dataLength))
     {
-        NXPLOG_API_E ("%s: NDEF message is too large!\n)", __FUNCTION__);
+        NXPLOG_API_D ("%s: NDEF message is too large!\n", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
     if (NFA_STATUS_OK != NDEF_MsgValidate(data, dataLength,  FALSE))
     {
-        NXPLOG_API_E ("%s: not NDEF message!\n)", __FUNCTION__);
+        NXPLOG_API_D ("%s: not NDEF message!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
     /* Create the write semaphore */
     if (sem_init (&sWriteSem, 0, 0) == -1)
     {
-        NXPLOG_API_E ("%s: semaphore creation failed (errno=0x%08x)", __FUNCTION__, errno);
+        NXPLOG_API_D ("%s: semaphore creation failed (errno=0x%08x)", __FUNCTION__, errno);
         return NFA_STATUS_FAILED;
     }
+
+    NXPLOG_API_D ("%s: continue %d, %d\n)", __FUNCTION__, sCheckNdefCapable, sCheckNdefMaxSize);
 
     gSyncMutex.lock();
     if (!nativeNfcManager_isNfcActive())
@@ -1730,6 +1752,7 @@ INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength
                 goto TheEnd;
             }
         }
+
         NXPLOG_API_D ("%s: try write", __FUNCTION__);
         status = NFA_RwWriteNDef (data, dataLength);
     }

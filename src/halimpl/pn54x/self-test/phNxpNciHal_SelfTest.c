@@ -236,7 +236,7 @@ static nci_test_data_t prbs_test_data[] = {
     {
         {
 #if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x20,0x01,0x02,0x00,0x00} /* cmd */
+            0x03, {0x20,0x01,0x00} /* cmd */
 #else
             0x03, {0x20,0x01,0x00} /* cmd */
 #endif

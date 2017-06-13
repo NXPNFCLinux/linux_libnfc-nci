@@ -46,11 +46,7 @@ typedef enum {
 	SNEP_SERVER_STARTED,
 }SNEP_SERVER_STATE;
 
-#ifdef WIN_PLATFORM
 static char SNEP_SERVER_NAME[] = {'u','r','n',':','n','f','c',':','s','n',':','s','n','e','p','\0'};
-#else
-static char SNEP_SERVER_NAME[] = {'u','r','n',':','n','f','c',':','s','n',':','s','n','e','p'};
-#endif
 
 /* SNEP Server Handles */
 static tNFA_HANDLE sSnepServerHandle = 0;

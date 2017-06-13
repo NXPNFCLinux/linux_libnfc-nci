@@ -61,7 +61,7 @@ void cipher_generate_keys()
     ecdh_get_localkeys();
     ecdh_get_randomnonce(cipher_suite.randomNonce_local);
 
-    BN_bn2bin(ecdh_key.privKey_local->priv_key,cipher_suite.privKey);
+    BN_bn2bin(EC_KEY_get0_private_key(ecdh_key.privKey_local),cipher_suite.privKey);
     BN_bn2bin(ecdh_key.x_a_local,cipher_suite.pubKey_local_x_a);
     BN_bn2bin(ecdh_key.y_a_local,cipher_suite.pubKey_local_y_a);
 

@@ -112,7 +112,7 @@ NFCSTATUS phTmlNfc_Init(pphTmlNfc_Config_t pConfig)
             if (NFCSTATUS_SUCCESS != wInitStatus)
             {
                 wInitStatus = PHNFCSTVAL(CID_NFC_TML, NFCSTATUS_INVALID_DEVICE);
-                gpphTmlNfc_Context->pDevHandle = (void *) NFCSTATUS_INVALID_DEVICE;
+                gpphTmlNfc_Context->pDevHandle = NULL;
             }
             else
             {
@@ -356,7 +356,7 @@ static void phTmlNfc_TmlThread(void *pParam)
             dwNoBytesWrRd = PH_TMLNFC_RESET_VALUE;
 
             /* Read the data from the file onto the buffer */
-            if (NFCSTATUS_INVALID_DEVICE != (uintptr_t)gpphTmlNfc_Context->pDevHandle)
+            if ((uintptr_t)gpphTmlNfc_Context->pDevHandle > 0)
             {
                 NXPLOG_TML_D("PN54X - Invoking I2C Read.....\n");
                 dwNoBytesWrRd = phTmlNfc_i2c_read(gpphTmlNfc_Context->pDevHandle, temp, 260);
@@ -467,7 +467,7 @@ static void phTmlNfc_TmlWriterThread(void *pParam)
             NXPLOG_TML_D("PN54X - Write requested.....\n");
             /* Set the variable to success initially */
             wStatus = NFCSTATUS_SUCCESS;
-            if (NFCSTATUS_INVALID_DEVICE != (uintptr_t)gpphTmlNfc_Context->pDevHandle)
+            if ((uintptr_t)gpphTmlNfc_Context->pDevHandle > 0)
             {
                 retry:
 
@@ -551,6 +551,7 @@ static void phTmlNfc_TmlWriterThread(void *pParam)
             else
             {
                 NXPLOG_TML_D("PN54X - NFCSTATUS_INVALID_DEVICE != gpphTmlNfc_Context->pDevHandle");
+                NXPLOG_TML_D("PN54X - gpphTmlNfc_Context->pDevHandle = NFCSTATUS_INVALID_DEVICE");
             }
 
             /* If Data packet is sent, then NO retransmission */

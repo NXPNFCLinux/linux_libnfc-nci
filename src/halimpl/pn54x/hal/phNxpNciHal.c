@@ -1987,12 +1987,16 @@ void phNxpNciHal_close_complete(NFCSTATUS status)
  ******************************************************************************/
 void phNxpNciHal_notify_i2c_fragmentation(void)
 {
+#ifdef PHFL_TML_LPCUSBSIO
+    /* In the specific case of LPCUSBSIO TML impelmentation, upper layer must not be informed of fragmentation */
+#else
     if (nxpncihal_ctrl.p_nfc_stack_cback != NULL)
     {
         /*inform libnfc-nci that i2c fragmentation is enabled/disabled */
         (*nxpncihal_ctrl.p_nfc_stack_cback)(HAL_NFC_ENABLE_I2C_FRAGMENTATION_EVT,
                 HAL_NFC_STATUS_OK);
     }
+#endif
 }
 /******************************************************************************
  * Function         phNxpNciHal_control_granted
@@ -2400,7 +2404,12 @@ void phNxpNciHal_enable_i2c_fragmentation()
     /*NCI_INIT_CMD*/
     static uint8_t cmd_init_nci[] = {0x20,0x01,0x00};
     static uint8_t get_i2c_fragmentation_cmd[] = {0x20, 0x03, 0x03, 0x01 ,0xA0 ,0x05};
+#ifdef PHFL_TML_LPCUSBSIO
+    /* In the specific case of LPCUSBSIO TML implementation fragmentation must always been enabled */
+    i2c_status = 0x01;
+#else
     isfound = (GetNxpNumValue(NAME_NXP_I2C_FRAGMENTATION_ENABLED, (void *)&i2c_status, sizeof(i2c_status)));
+#endif
     status = phNxpNciHal_send_ext_cmd(sizeof(get_i2c_fragmentation_cmd),get_i2c_fragmentation_cmd);
     if(status != NFCSTATUS_SUCCESS)
     {

@@ -31,7 +31,7 @@
 #include <openssl/sha.h>
 #include <openssl/cmac.h>
 #include <openssl/bn.h>
-#include <openssl/ec_lcl.h>
+//#include <openssl/ec_lcl.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include "data_types.h"
