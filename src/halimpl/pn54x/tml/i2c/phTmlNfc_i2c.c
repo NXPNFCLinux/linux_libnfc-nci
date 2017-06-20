@@ -83,14 +83,14 @@ static int verifyPin( int pin, int isoutput, int edge ) {
             sprintf( buf, "%d", pin );
             if ( write( fd, buf, strlen(buf) ) == strlen(buf) ) {
                 hasGpio = 1;
+		usleep(100*1000);
             }
-            close( fd );
         }
     } else {
         NXPLOG_TML_E( "System already has pin %s\n", buf );
         hasGpio = 1;
-        close( fd );
     }
+    close( fd );
 
     if ( hasGpio ) {
         // Make sure it is an output
@@ -122,7 +122,7 @@ static int verifyPin( int pin, int isoutput, int edge ) {
                     NXPLOG_TML_D( "Pin %d now an input\n", pin );
                 }
                 close(fd);
-            
+
                 if ( edge != EDGE_NONE ) {
                     // Open pin edge control
                     sprintf( buf, "/sys/class/gpio/gpio%d/edge", pin );
