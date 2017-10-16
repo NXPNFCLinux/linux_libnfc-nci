@@ -25,8 +25,9 @@
  *  0 = Custom configuration
  *  1 = OM557x on Raspberry Pi
  *  2 = OM557x on UdooNeo
+ *  3 = OM557x on BeagleBone black
  */
-#define CONFIGURATION    3
+#define CONFIGURATION    1
 
 #if (CONFIGURATION == 1)
 /* OM557x on Raspberry Pi */
