@@ -2179,7 +2179,6 @@ int CleanEnv()
 {
 	if(NULL != g_ThreadHandle)
 	{
-		framework_JoinThread(g_ThreadHandle);
 		framework_DeleteThread(g_ThreadHandle);
 		g_ThreadHandle = NULL;
 	}

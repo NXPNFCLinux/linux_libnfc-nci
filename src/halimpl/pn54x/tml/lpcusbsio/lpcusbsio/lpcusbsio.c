@@ -212,6 +212,8 @@ static int32_t validHandle(LPCUSBSIO_I2C_Ctrl_t *dev)
 {
     LPCUSBSIO_I2C_Ctrl_t *curDev = g_Ctrl.devList;
     
+    if (curDev == NULL) return 0;
+
     while (dev != curDev) {
         curDev = curDev->next;
     }
