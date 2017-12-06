@@ -22,6 +22,7 @@
 #include "data_types.h"
 #include "phNxpLog.h"
 #include "phNxpConfig.h"
+#include <sys/time.h>
 #endif
 #define BTE_LOG_BUF_SIZE 1024
 #define BTE_LOG_MAX_SIZE (BTE_LOG_BUF_SIZE - 12)
@@ -41,6 +42,8 @@ const char * NXPLOG_ITEM_HCPR    = "NxpHcpR:     ";
 
 /* global log level structure */
 nci_log_level_t gLog_level;
+
+struct timeval ref;
 
 /*******************************************************************************
  *
@@ -167,6 +170,7 @@ void phNxpLog_InitializeLogLevel(void)
                 __FUNCTION__, gLog_level.global_log_level, gLog_level.dnld_log_level,
                     gLog_level.extns_log_level, gLog_level.hal_log_level, gLog_level.tml_log_level,
                     gLog_level.ncir_log_level, gLog_level.ncix_log_level);
+    gettimeofday(&ref, NULL);
 }
 
 void phNxpLog_LogMsg (UINT32 trace_set_mask, const char *item, const char *fmt_str, ...)
@@ -174,12 +178,29 @@ void phNxpLog_LogMsg (UINT32 trace_set_mask, const char *item, const char *fmt_s
     static char buffer [BTE_LOG_BUF_SIZE];
     va_list ap;
     UINT32 trace_type = trace_set_mask & 0x07; //lower 3 bits contain trace type
+    struct timeval tv;
+    long unsigned int time_s;
+    long unsigned int time_ms;
+    long unsigned int time_us;
 
+    gettimeofday(&tv, NULL);
+    
+    time_s = (tv.tv_sec - ref.tv_sec);
+    if(ref.tv_usec > tv.tv_usec)
+    {
+        time_s--;
+        time_us = ((long unsigned) tv.tv_usec + 1000000) - ((long unsigned) ref.tv_usec);
+    }
+    else
+    {
+        time_us = ((long unsigned) tv.tv_usec) - ((long unsigned) ref.tv_usec);
+    }
+
+    fprintf (stderr, "%d:%03d:%03d - ", time_s, time_us/1000, time_us%1000);
     fprintf (stderr, "%s", item);
     va_start (ap, fmt_str);
     vsnprintf (buffer, BTE_LOG_BUF_SIZE, fmt_str, ap);
     vfprintf (stderr, buffer, ap);
-    
     va_end (ap);
     fprintf (stderr, "\n");
 }
