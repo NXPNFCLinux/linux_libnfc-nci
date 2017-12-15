@@ -369,7 +369,6 @@ void phNxpNciHal_cleanup_monitor(void)
     if (nxpncihal_monitor != NULL)
     {
         pthread_mutex_destroy(&nxpncihal_monitor->concurrency_mutex);
-        REENTRANCE_UNLOCK();
         pthread_mutex_destroy(&nxpncihal_monitor->reentrance_mutex);
         phNxpNciHal_releaseall_cb_data();
         listDestroy(&nxpncihal_monitor->sem_list);

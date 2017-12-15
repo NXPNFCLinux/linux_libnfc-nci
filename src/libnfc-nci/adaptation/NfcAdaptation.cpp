@@ -200,7 +200,7 @@ void NfcAdaptation::Initialize ()
     GKI_enable ();
     GKI_create_task ((TASKPTR)NFCA_TASK, BTU_TASK, (INT8*)"NFCA_TASK", 0, 0, (pthread_cond_t*)NULL, NULL);
     {
-        AutoThreadMutex guard(mCondVar);
+        mCondVar.lock();
         GKI_create_task ((TASKPTR)Thread, MMI_TASK, (INT8*)"NFCA_THREAD", 0, 0, (pthread_cond_t*)NULL, NULL);
         mCondVar.wait();
     }
@@ -284,7 +284,7 @@ UINT32 NfcAdaptation::Thread (UINT32 arg)
 
     {
         ThreadCondVar    CondVar;
-        AutoThreadMutex  guard(CondVar);
+        CondVar.lock();
         GKI_create_task ((TASKPTR)nfc_task, NFC_TASK, (INT8*)"NFC_TASK", 0, 0, (pthread_cond_t*)CondVar, (pthread_mutex_t*)CondVar);
         CondVar.wait();
     }
