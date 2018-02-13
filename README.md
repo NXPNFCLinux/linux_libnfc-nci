@@ -8,7 +8,7 @@ Further details about the stack [here](http://www.nxp.com/documents/application_
 
 Release version
 ---------------
-R2.2 includes support for altenartive to pn5xx_i2c kernel driver and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
+R2.2 includes support for alternative to pn5xx_i2c kernel driver and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
 
 R2.1 includes support for PN7150 NFC Controller IC and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
 
