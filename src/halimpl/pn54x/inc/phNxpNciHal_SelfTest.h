@@ -73,6 +73,36 @@ typedef struct phAntenna_St_Resp
 }phAntenna_St_Resp_t;           /* Instance of Transaction structure */
 
 
+/* NCI Commands */
+#define NCI_CORE_RESET_NCI20_RSP   {0x40, 0x00, 0x01, 0x00}
+#define NCI_CORE_RESET_NCI20_NTF   {0x60, 0x00, 0x09, 0x02, 0x00, 0x20, 0x04, 0x04, 0x51, 0x12, 0x01, 0x03}
+#define NCI_CORE_INIT_NCI20_CMD    {0x20, 0x01, 0x02, 0x00, 0x00}
+#define NCI_CORE_INIT_NCI20_RSP    {0x40, 0x01, 0x1E, 0x00}
+#define NCI_CORE_INIT_NCI10_CMD    {0x20, 0x01, 0x00}
+#define NCI20_CORE_RESET_RSP_LEN   0x01
+#define NCI10_CORE_RESET_RSP_LEN   0x03
+#define NCI_CORE_RESET_STATUS_OK   0x00
+#define NCI_MSG_TYPE_MASK          0xF0
+
+/* Proprietary Commands */
+#define SYSTEM_SET_POWERMGT_CMD        {0x2F, 0x00, 0x01, 0x00}
+#define SYSTEM_SET_POWERMGT_CMD_1      {0x2F, 0x00, 0x01, 0x01}
+#define SYSTEM_SET_POWERMGT_RSP        {0x4F, 0x00, 0x01, 0x00}
+#define SYSTEM_PROPRIETARY_ACT_CMD     {0x2F, 0x02, 0x00}
+#define SYSTEM_PROPRIETARY_ACT_RSP     {0x4F, 0x02, 0x05, 0x00}
+#define SYSTEM_TEST_ANTENNA_CMD_1      {0x2F, 0x3D, 0x05, 0x20, 0x01, 0x00, 0x00, 0x00}
+#define SYSTEM_TEST_ANTENNA_RSP_1      {0x4F, 0x3D, 0x05, 0x00}
+#define SYSTEM_TEST_ANTENNA_CMD_2      {0x2F, 0x3D, 0x02, 0x20, 0x01}
+#define SYSTEM_TEST_ANTENNA_CMD_3      {0x2F, 0x3D, 0x02, 0x20, 0x00}
+#define SYSTEM_TEST_ANTENNA_CMD_4      {0x2F, 0x3D, 0x05, 0x20, 0x00, 0x00, 0x00, 0x00}
+#define SYSTEM_TEST_ANTENNA_CMD_5      {0x2F, 0x3D, 0x02, 0x01, 0x80}
+#define SYSTEM_TEST_ANTENNA_RSP_2      {0x4F, 0x3D, 05}
+#define SYSTEM_TEST_ANTENNA_CMD_6      {0x2F, 0x3D, 0x04, 0x08, 0x8C, 0x60, 0x03}
+#define SYSTEM_TEST_ANTENNA_CMD_7      {0x2F, 0x3D, 0x04, 0x02, 0xC8, 0x60, 0x03}
+#define SYSTEM_TEST_ANTENNA_CMD_8      {0x2F, 0x3D, 0x04, 0x02, 0xCD, 0x60, 0x03}
+#define SYSTEM_TEST_ANTENNA_CMD_9      {0x2F, 0x3D, 0x04, 0x04, 0x20, 0x08, 0x20}
+
+
 /*******************************************************************************
  **
  ** Function         phNxpNciHal_TestMode_open
@@ -124,12 +154,9 @@ NFCSTATUS phNxpNciHal_SwpTest (uint8_t swp_line);
  **                  otherwise NFCSTATUS_FAILED.
  **
  *******************************************************************************/
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 NFCSTATUS phNxpNciHal_PrbsTestStart (phNxpNfc_PrbsType_t prbs_type, phNxpNfc_PrbsHwType_t hw_prbs_type,
         phNxpNfc_Tech_t tech, phNxpNfc_Bitrate_t bitrate);
-#else
-NFCSTATUS phNxpNciHal_PrbsTestStart (phNxpNfc_Tech_t tech, phNxpNfc_Bitrate_t bitrate);
-#endif
+
 /*******************************************************************************
  **
  ** Function         phNxpNciHal_PrbsTestStop

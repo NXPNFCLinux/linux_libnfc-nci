@@ -46,9 +46,11 @@ extern "C"
     #include "nfa_api.h"
     #include "nfc_int.h"
     #include "android_logmsg.h"
+    #include "vendor_cfg.h"
     #include "phNxpNciHal.h"
     #include "phNxpNciHal_Adaptation.h"
     #include "phNxpLog.h"
+    #include "phNxpConfig.h"
 }
 
 #define LOG_TAG "NfcAdaptation"
@@ -57,6 +59,8 @@ extern "C" void GKI_shutdown();
 extern void resetConfig();
 extern "C" void verify_stack_non_volatile_store ();
 extern "C" void delete_stack_non_volatile_store (BOOLEAN forceDelete);
+
+
 
 NfcAdaptation* NfcAdaptation::mpInstance = NULL;
 ThreadMutex NfcAdaptation::sLock;
@@ -75,7 +79,7 @@ UINT8 appl_trace_level = 0xff;
 #if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
 UINT8 appl_dta_mode_flag = 0x00;
 #endif
-char bcm_nfc_location[120];
+char nfc_nci_store[120];
 char nci_hal_module[64];
 
 static UINT8 nfa_dm_cfg[sizeof ( tNFA_DM_CFG ) ];
@@ -84,6 +88,9 @@ extern UINT8 nfa_ee_max_ee_cfg;
 static UINT8 deviceHostWhiteList [NFA_HCI_MAX_HOST_IN_NETWORK];
 static tNFA_HCI_CFG jni_nfa_hci_cfg;
 extern tNFA_HCI_CFG *p_nfa_hci_cfg;
+
+static uint8_t nfa_proprietary_cfg[sizeof(tNFA_PROPRIETARY_CFG)];
+extern tNFA_PROPRIETARY_CFG* p_nfa_proprietary_cfg;
 
 /*******************************************************************************
 **
@@ -155,22 +162,17 @@ void NfcAdaptation::Initialize ()
             NXPLOG_API_D("%s: logging protocol in raw format", func);
         }
     }
-    if ( !GetStrValue ( NAME_NFA_STORAGE, bcm_nfc_location, sizeof ( bcm_nfc_location ) ) )
+
+    if ( !GetStrValue ( NAME_NFA_STORAGE, nfc_nci_store, sizeof ( nfc_nci_store ) ) )
     {
-        strcpy(bcm_nfc_location, "/data/nfc");
-        //strlcpy (bcm_nfc_location, "/data/nfc", sizeof(bcm_nfc_location));
+        strcpy(nfc_nci_store, "/usr/local/lib/");
     }
+
     if ( GetNumValue ( NAME_PROTOCOL_TRACE_LEVEL, &num, sizeof ( num ) ) )
         ScrProtocolTraceFlag = num;
 
     if ( GetStrValue ( NAME_NFA_DM_CFG, (char*)nfa_dm_cfg, sizeof ( nfa_dm_cfg ) ) )
         p_nfa_dm_cfg = ( tNFA_DM_CFG * ) &nfa_dm_cfg[0];
-
-    if ( GetNumValue ( NAME_NFA_MAX_EE_SUPPORTED, &num, sizeof ( num ) ) )
-    {
-        nfa_ee_max_ee_cfg = num;
-        NXPLOG_API_D("%s: Overriding NFA_EE_MAX_EE_SUPPORTED to use %d", func, nfa_ee_max_ee_cfg);
-    }
 
     //configure device host whitelist of HCI host ID's; see specification ETSI TS 102 622 V11.1.10
     //(2012-10), section 6.1.3.1
@@ -200,7 +202,7 @@ void NfcAdaptation::Initialize ()
     GKI_enable ();
     GKI_create_task ((TASKPTR)NFCA_TASK, BTU_TASK, (INT8*)"NFCA_TASK", 0, 0, (pthread_cond_t*)NULL, NULL);
     {
-        AutoThreadMutex guard(mCondVar);
+        mCondVar.lock();
         GKI_create_task ((TASKPTR)Thread, MMI_TASK, (INT8*)"NFCA_THREAD", 0, 0, (pthread_cond_t*)NULL, NULL);
         mCondVar.wait();
     }
@@ -210,6 +212,40 @@ void NfcAdaptation::Initialize ()
     NXPLOG_API_D ("%s: exit", func);
 }
 
+/*******************************************************************************
+**
+** Function:    NfcAdaptation::Configure()
+**
+** Description: class configuration
+**
+** Returns:     none
+**
+*******************************************************************************/
+void NfcAdaptation::Configure ()
+{
+    unsigned long num;
+
+    if(phNxpNciHal_getChipType() == pn547C2)
+    {
+        isNxpConfigValid(NXP_CONFIG_TYPE_PN547);
+    }
+    else
+    {
+        isNxpConfigValid(NXP_CONFIG_TYPE_PN548);
+    }
+    memset (&nfa_proprietary_cfg, 0, sizeof(nfa_proprietary_cfg));
+    if (GetNxpStrValue(NAME_NXP_NFC_PROPRIETARY_CFG, (char*)nfa_proprietary_cfg,
+                    sizeof(tNFA_PROPRIETARY_CFG))) {
+      p_nfa_proprietary_cfg =
+          (tNFA_PROPRIETARY_CFG*)(void*)(&nfa_proprietary_cfg[0]);
+    }
+
+    if ( GetNxpNumValue ( NAME_NXP_NFC_MAX_EE_SUPPORTED, &num, sizeof ( num ) ) )
+    {
+        nfa_ee_max_ee_cfg = num;
+        NXPLOG_API_D("%s: Overriding NFA_EE_MAX_EE_SUPPORTED to use %d", __FUNCTION__, nfa_ee_max_ee_cfg);
+    }
+}
 /*******************************************************************************
 **
 ** Function:    NfcAdaptation::Finalize()
@@ -284,7 +320,7 @@ UINT32 NfcAdaptation::Thread (UINT32 arg)
 
     {
         ThreadCondVar    CondVar;
-        AutoThreadMutex  guard(CondVar);
+        CondVar.lock();
         GKI_create_task ((TASKPTR)nfc_task, NFC_TASK, (INT8*)"NFC_TASK", 0, 0, (pthread_cond_t*)CondVar, (pthread_mutex_t*)CondVar);
         CondVar.wait();
     }
@@ -439,6 +475,9 @@ void NfcAdaptation::HalDeviceContextDataCallback (uint16_t data_len, uint8_t* p_
 {
     const char* func = "NfcAdaptation::HalDeviceContextDataCallback";
     NXPLOG_API_D ("%s: len=%u", func, data_len);
+#if (NFC_SERVICE_DATA_DEBUG == 0x01)
+    phNxpLog_LogBuffer (gLog_level.global_log_level, "\tRecvd", p_data , data_len);
+#endif
     if (mHalDataCallback)
         mHalDataCallback (data_len, p_data);
 }
@@ -456,6 +495,10 @@ void NfcAdaptation::HalWrite (UINT16 data_len, UINT8* p_data)
 {
     const char* func = "NfcAdaptation::HalWrite";
     NXPLOG_API_D ("%s", func);
+#if (NFC_SERVICE_DATA_DEBUG == 0x01)
+    phNxpLog_LogBuffer (gLog_level.global_log_level, "\tSend", p_data , data_len);
+#endif
+
     phNxpNciHal_write (data_len, p_data);
 }
 

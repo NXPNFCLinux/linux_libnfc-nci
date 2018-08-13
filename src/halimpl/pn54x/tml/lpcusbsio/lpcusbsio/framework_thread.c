@@ -39,6 +39,7 @@ typedef struct tLinuxThread
 	void* ctx;
 	void* (*threadedFunc)(void *);
 	void* mutexCanDelete;
+	char* pThreadName;
 }tLinuxThread_t;
 
 void* thread_object_func(void* obj)
@@ -55,25 +56,35 @@ void* thread_object_func(void* obj)
 
 eResult framework_CreateThread(void** threadHandle, void * (* threadedFunc)(void *) , void * ctx)
 {
+	eResult threadStatus = FRAMEWORK_FAILED;
 	tLinuxThread_t *linuxThread = (tLinuxThread_t *)framework_AllocMem(sizeof(tLinuxThread_t));
 	
 	linuxThread->ctx = ctx;
 	linuxThread->threadedFunc = threadedFunc;
+	linuxThread->pThreadName = "FRAMEWORK_TASK";
 	framework_CreateMutex(&(linuxThread->mutexCanDelete));
 	
-	if (pthread_create(&(linuxThread->thread), NULL, thread_object_func, linuxThread))
-	{
-		framework_Error("Cannot create Thread\n");
-		framework_DeleteMutex(linuxThread->mutexCanDelete);
-		framework_FreeMem(linuxThread);
-		
-		return FRAMEWORK_FAILED;
-	}
-	pthread_detach(linuxThread->thread);
-	
-	*threadHandle = linuxThread;
-	
-	return FRAMEWORK_SUCCESS;
+    if (pthread_create(&(linuxThread->thread), NULL, thread_object_func, linuxThread))
+    {
+        framework_Error("Cannot create Thread\n");
+        framework_DeleteMutex(linuxThread->mutexCanDelete);
+        framework_FreeMem(linuxThread);
+
+    }
+    else
+    {
+        pthread_detach(linuxThread->thread);
+        *threadHandle = linuxThread;
+
+        if(pthread_setname_np((linuxThread->thread),linuxThread->pThreadName))
+        {
+        	framework_Error("pthread_setname_np failed");
+        }
+
+        threadStatus = FRAMEWORK_SUCCESS;
+    }
+
+    return threadStatus;
 }
 
 void framework_JoinThread(void * threadHandle)

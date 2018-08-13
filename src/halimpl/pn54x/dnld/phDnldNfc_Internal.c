@@ -51,23 +51,18 @@
 #define PHDNLDNFC_USERDATA_EEPROM_LENSIZE    (0x02U)    /* size of EEPROM user data length */
 #define PHDNLDNFC_USERDATA_EEPROM_OFFSIZE    (0x02U)    /* size of EEPROM offset */
 
-#ifdef  NXP_PN547C1_DOWNLOAD
 /* EEPROM offset and length value for C1 */
-#define PHDNLDNFC_USERDATA_EEPROM_OFFSET  (0x003CU)    /* 16 bits offset indicating user data area start location */
-#define PHDNLDNFC_USERDATA_EEPROM_LEN     (0x0DC0U)    /* 16 bits length of user data area */
-#else
+#define PHDNLDNFC_PN547C1_USERDATA_EEPROM_OFFSET  (0x003CU)    /* 16 bits offset indicating user data area start location */
+#define PHDNLDNFC_PN547C1_USERDATA_EEPROM_LEN     (0x0DC0U)    /* 16 bits length of user data area */
 
-#if(NFC_NXP_CHIP_TYPE == PN547C2)
 /* EEPROM offset and length value for C2 */
-#define PHDNLDNFC_USERDATA_EEPROM_OFFSET  (0x023CU)    /* 16 bits offset indicating user data area start location */
-#define PHDNLDNFC_USERDATA_EEPROM_LEN     (0x0C80U)    /* 16 bits length of user data area */
-#else
-/* EEPROM offset and length value for PN548AD */
-#define PHDNLDNFC_USERDATA_EEPROM_OFFSET  (0x02BCU)    /* 16 bits offset indicating user data area start location */
-#define PHDNLDNFC_USERDATA_EEPROM_LEN     (0x0C00U)    /* 16 bits length of user data area */
-#endif
+#define PHDNLDNFC_PN547C2_USERDATA_EEPROM_OFFSET  (0x023CU)    /* 16 bits offset indicating user data area start location */
+#define PHDNLDNFC_PN547C2_USERDATA_EEPROM_LEN     (0x0C80U)    /* 16 bits length of user data area */
 
-#endif
+/* EEPROM offset and length value for PN548AD */
+#define PHDNLDNFC_PN548C2_USERDATA_EEPROM_OFFSET  (0x02BCU)    /* 16 bits offset indicating user data area start location */
+#define PHDNLDNFC_PN548C2_USERDATA_EEPROM_LEN     (0x0C00U)    /* 16 bits length of user data area */
+
 #define PH_LIBNFC_VEN_RESET_ON_DOWNLOAD_TIMEOUT (1)
 
 /* Function prototype declarations */
@@ -762,11 +757,27 @@ static NFCSTATUS phDnldNfc_CreateFramePld(pphDnldNfc_DlContext_t pDlContext)
         {
             (pDlContext->tCmdRspFrameInfo.dwSendlength) += PHDNLDNFC_MIN_PLD_LEN;
 
-            wChkIntgVal = PHDNLDNFC_USERDATA_EEPROM_OFFSET;
+            if (phNxpNciHal_getChipType() != pn547C2)
+            {
+                wChkIntgVal = PHDNLDNFC_PN548C2_USERDATA_EEPROM_OFFSET;
+            }
+            else
+            {
+                wChkIntgVal = PHDNLDNFC_PN547C2_USERDATA_EEPROM_OFFSET;
+            }
+
             memcpy(&(pDlContext->tCmdRspFrameInfo.aFrameBuff[PHDNLDNFC_FRAME_RDDATA_OFFSET]),
                         &wChkIntgVal,sizeof(wChkIntgVal));
 
-            wChkIntgVal = PHDNLDNFC_USERDATA_EEPROM_LEN;
+            if (phNxpNciHal_getChipType() != pn547C2)
+            {
+                wChkIntgVal = PHDNLDNFC_PN548C2_USERDATA_EEPROM_LEN;
+            }
+            else
+            {
+                wChkIntgVal = PHDNLDNFC_PN547C2_USERDATA_EEPROM_LEN;
+            }
+
             memcpy(&(pDlContext->tCmdRspFrameInfo.aFrameBuff[PHDNLDNFC_FRAME_RDDATA_OFFSET +
                 PHDNLDNFC_USERDATA_EEPROM_OFFSIZE]),&wChkIntgVal,sizeof(wChkIntgVal));
 

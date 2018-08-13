@@ -834,9 +834,6 @@ static tNFA_DM_DISC_TECH_PROTO_MASK nfa_dm_disc_get_disc_mask (tNFC_RF_TECH_N_MO
     case NFC_DISCOVERY_TYPE_POLL_B_PRIME:
         disc_mask = NFA_DM_DISC_MASK_P_B_PRIME;
         break;
-    case NFC_DISCOVERY_TYPE_POLL_KOVIO:
-        disc_mask = NFA_DM_DISC_MASK_P_KOVIO;
-        break;
     case NFC_DISCOVERY_TYPE_POLL_A_ACTIVE:
         disc_mask = NFA_DM_DISC_MASK_PAA_NFC_DEP;
         break;
@@ -882,6 +879,12 @@ static tNFA_DM_DISC_TECH_PROTO_MASK nfa_dm_disc_get_disc_mask (tNFC_RF_TECH_N_MO
         break;
     case NFC_DISCOVERY_TYPE_LISTEN_F_ACTIVE:
         disc_mask = NFA_DM_DISC_MASK_LFA_NFC_DEP;
+        break;
+    default:
+        if(tech_n_mode == NFC_DISCOVERY_TYPE_POLL_KOVIO)
+        {
+            disc_mask = NFA_DM_DISC_MASK_P_KOVIO;
+        }
         break;
     }
 
@@ -1442,6 +1445,17 @@ static tNFA_STATUS nfa_dm_disc_notify_activation (tNFC_DISCOVER *p_data)
 
     tNFA_DM_DISC_TECH_PROTO_MASK activated_disc_mask;
 
+    UINT8 uicc_direct_intf = NCI_INTERFACE_UICC_DIRECT;
+    UINT8 ese_direct_intf = NCI_INTERFACE_ESE_DIRECT;
+
+	if(phNxpNciHal_getChipType() == pn547C2)
+	{
+		/* RU: Decrement the Direct interface Values for the PN547
+		 *  */
+		uicc_direct_intf--;
+		ese_direct_intf--;
+	}
+
     NFA_TRACE_DEBUG2 ("nfa_dm_disc_notify_activation (): tech_n_mode:0x%X, proto:0x%X",
                        tech_n_mode, protocol);
 
@@ -1503,7 +1517,7 @@ static tNFA_STATUS nfa_dm_disc_notify_activation (tNFC_DISCOVER *p_data)
      * 1. Pass this info to JNI as START_READER_EVT.
      * return (NFA_STATUS_OK)
      */
-    if (p_data->activate.intf_param.type  == NCI_INTERFACE_UICC_DIRECT || p_data->activate.intf_param.type == NCI_INTERFACE_ESE_DIRECT)
+    if (p_data->activate.intf_param.type  == uicc_direct_intf || p_data->activate.intf_param.type == ese_direct_intf)
     {
         for (xx = 0; xx < NFA_DM_DISC_NUM_ENTRIES; xx++)
         {
@@ -2288,6 +2302,17 @@ static void nfa_dm_disc_sm_discovery (tNFA_DM_RF_DISC_SM_EVENT event,
         }
         else
         {
+            UINT8 uicc_direct_intf = NCI_INTERFACE_UICC_DIRECT;
+            UINT8 ese_direct_intf = NCI_INTERFACE_ESE_DIRECT;
+
+        	if(phNxpNciHal_getChipType() == pn547C2)
+        	{
+        		/* RU: Decrement the Direct interface Values for the PN547
+        		 *  */
+        		uicc_direct_intf--;
+        		ese_direct_intf--;
+        	}
+
             if (p_data->nfc_discover.activate.intf_param.type == NFC_INTERFACE_EE_DIRECT_RF)
             {
                 nfa_dm_disc_new_state (NFA_DM_RFST_LISTEN_ACTIVE);
@@ -2298,8 +2323,8 @@ static void nfa_dm_disc_sm_discovery (tNFA_DM_RF_DISC_SM_EVENT event,
              * Add condition UICC_DIRECT_INTF/ESE_DIRECT_INTF
              * set new state NFA_DM_RFST_POLL_ACTIVE
              * */
-            else if (p_data->nfc_discover.activate.intf_param.type == NCI_INTERFACE_UICC_DIRECT ||
-                    p_data->nfc_discover.activate.intf_param.type == NCI_INTERFACE_ESE_DIRECT )
+            else if (p_data->nfc_discover.activate.intf_param.type == uicc_direct_intf ||
+                    p_data->nfc_discover.activate.intf_param.type == ese_direct_intf )
             {
                 nfa_dm_disc_new_state (NFA_DM_RFST_POLL_ACTIVE);
             }
@@ -3365,6 +3390,17 @@ BOOLEAN nfa_dm_p2p_prio_logic(UINT8 event, UINT8 *p, UINT8 ntf_rsp)
         UINT8 protocol = 0xFF;
         UINT8 tech_mode = 0xFF;
 
+        UINT8 uicc_direct_intf = NCI_INTERFACE_UICC_DIRECT;
+        UINT8 ese_direct_intf = NCI_INTERFACE_ESE_DIRECT;
+
+    	if(phNxpNciHal_getChipType() == pn547C2)
+    	{
+    		/* RU: Decrement the Direct interface Values for the PN547
+    		 *  */
+    		uicc_direct_intf--;
+    		ese_direct_intf--;
+    	}
+
         NFA_TRACE_DEBUG0 ("P2P_Prio_Logic");
 
         if (event == NCI_MSG_RF_INTF_ACTIVATED )
@@ -3377,7 +3413,7 @@ BOOLEAN nfa_dm_p2p_prio_logic(UINT8 event, UINT8 *p, UINT8 ntf_rsp)
         NFA_TRACE_DEBUG1("nfa_dm_p2p_prio_logic type = 0x%x", type);
 
 
-        if(type == NCI_INTERFACE_UICC_DIRECT || type == NCI_INTERFACE_ESE_DIRECT )
+        if(type == uicc_direct_intf || type == ese_direct_intf )
         {
              NFA_TRACE_DEBUG0 ("Disable the p2p prio logic RDR_SWP");
              return TRUE;

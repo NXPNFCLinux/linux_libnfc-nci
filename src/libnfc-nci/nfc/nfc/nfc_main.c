@@ -47,6 +47,7 @@
 #include "nfc_target.h"
 #include "bt_types.h"
 #include "hcidefs.h"
+#include <phNxpNciHal.h>
 
 #if (NFC_INCLUDED == TRUE)
 #include "nfc_hal_api.h"
@@ -82,17 +83,13 @@ tNFC_CB nfc_cb;
 UINT8 i2c_fragmentation_enabled = 0xff;
 #if (NFC_RW_ONLY == FALSE)
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 #define NFC_NUM_INTERFACE_MAP   4
 #else
 #define NFC_NUM_INTERFACE_MAP   3
-#endif
-#else
-#define NFC_NUM_INTERFACE_MAP   3
-#endif
+#endif /* (NFC_NXP_NOT_OPEN_INCLUDED == TRUE) */
 #else
 #define NFC_NUM_INTERFACE_MAP   1
-#endif
+#endif /* (NFC_RW_ONLY == FALSE) */
 
 static const tNCI_DISCOVER_MAPS nfc_interface_mapping[NFC_NUM_INTERFACE_MAP] =
 {
@@ -118,7 +115,6 @@ static const tNCI_DISCOVER_MAPS nfc_interface_mapping[NFC_NUM_INTERFACE_MAP] =
         NCI_INTERFACE_MODE_POLL,
         NCI_INTERFACE_MIFARE
     }
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
     ,
     /* This mapping is for Felica on DH  */
     {
@@ -126,7 +122,6 @@ static const tNCI_DISCOVER_MAPS nfc_interface_mapping[NFC_NUM_INTERFACE_MAP] =
         NCI_INTERFACE_MODE_LISTEN,
         NCI_INTERFACE_FRAME
     }
-#endif
 #endif
 };
 
@@ -768,6 +763,15 @@ tNFC_STATUS NFC_Enable (tNFC_RESPONSE_CBACK *p_cback)
     /* Open HAL transport. */
     nfc_set_state (NFC_STATE_W4_HAL_OPEN);
     nfc_cb.p_hal->open (nfc_main_hal_cback, nfc_main_hal_data_cback);
+    /* Moved from the init to Enable as the HAL open is just performed above */
+    if (phNxpNciHal_getChipType() == pn547C2)
+    {
+        /* Reduce the interface mapping size since Felica interface
+         * is not supported in pn547
+         */
+        (nfc_cb.num_disc_maps)--;
+        NFC_TRACE_API1 ("NFC_Enable (): nfc_cb.num_disc_maps = %d", nfc_cb.num_disc_maps);
+    }
 
     return (NFC_STATUS_OK);
 }
@@ -819,6 +823,8 @@ void NFC_Init (tHAL_NFC_ENTRY *p_hal_entry_tbl)
 {
     int xx;
 
+    NFC_TRACE_API0 ("NFC_Init ()");
+
     /* Clear nfc control block */
     memset (&nfc_cb, 0, sizeof (tNFC_CB));
 
@@ -834,10 +840,10 @@ void NFC_Init (tHAL_NFC_ENTRY *p_hal_entry_tbl)
     nfc_cb.nci_cmd_window   = NCI_MAX_CMD_WINDOW;
     nfc_cb.nci_wait_rsp_tout= NFC_CMD_CMPL_TIMEOUT;
     nfc_cb.p_disc_maps      = nfc_interface_mapping;
-    nfc_cb.num_disc_maps    = NFC_NUM_INTERFACE_MAP;
     nfc_cb.trace_level      = NFC_INITIAL_TRACE_LEVEL;
     nfc_cb.nci_ctrl_size    = NCI_CTRL_INIT_SIZE;
     nfc_cb.reassembly       = TRUE;
+    nfc_cb.num_disc_maps    = NFC_NUM_INTERFACE_MAP;
 
     rw_init ();
     ce_init ();

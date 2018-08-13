@@ -282,6 +282,13 @@ UINT8 GKI_create_task (TASKPTR task_entry, UINT8 task_id, INT8 *taskname, UINT16
          GKI_TRACE_2("pthread_create failed(%d), %s!", ret, taskname);
          return GKI_FAILURE;
     }
+    else
+    {
+         if(pthread_setname_np(gki_cb.os.thread_id[task_id],taskname))
+         {
+             GKI_TRACE_1("pthread_setname_np in %s failed",__FUNCTION__);
+         }
+    }
 
     if(pthread_getschedparam(gki_cb.os.thread_id[task_id], &policy, &param)==0)
     {
@@ -528,6 +535,13 @@ void GKI_run (void *p_task_id)
     {
         GKI_TRACE_0("GKI_run: pthread_create failed to create timer_thread!");
         return GKI_FAILURE;
+    }
+    else
+    {
+        if(pthread_setname_np(timer_thread_id,"GKI_TIMER_TASK"))
+        {
+            GKI_TRACE_1("pthread_setname_np in %s failed",__FUNCTION__);
+        }
     }
 #else
     GKI_TRACE_2("GKI_run, run_cond(%x)=%d ", p_run_cond, *p_run_cond);

@@ -121,3 +121,40 @@ const tNFA_HCI_CFG nfa_hci_cfg =
 };
 
 tNFA_HCI_CFG *p_nfa_hci_cfg = (tNFA_HCI_CFG *) &nfa_hci_cfg;
+
+const tNFA_PROPRIETARY_CFG nfa_proprietary_cfg_default = {
+#if (NXP_EXTNS == TRUE)
+    0x05, /* NCI_PROTOCOL_18092_ACTIVE */
+#else
+    0x80,
+#endif
+    0x81, /* NCI_PROTOCOL_B_PRIME */
+    0x82, /* NCI_PROTOCOL_DUAL */
+#if (NXP_EXTNS == TRUE)
+    0x06,
+#else
+    0x83, /* NCI_PROTOCOL_15693 */
+#endif
+#if (NXP_EXTNS == TRUE)
+    0x81,
+#else
+    0x8A, /* NCI_PROTOCOL_KOVIO */
+#endif
+#if (NXP_EXTNS == TRUE)
+    0x80,
+#else
+    0xFF, /* NCI_PROTOCOL_MIFARE */
+#endif
+#if (NXP_EXTNS == TRUE)
+    0x70,
+#else
+    0x77, /* NCI_DISCOVERY_TYPE_POLL_KOVIO */
+#endif
+    0x74, /* NCI_DISCOVERY_TYPE_POLL_B_PRIME */
+    0xF4, /* NCI_DISCOVERY_TYPE_LISTEN_B_PRIME */
+};
+
+tNFA_PROPRIETARY_CFG* p_nfa_proprietary_cfg =
+    (tNFA_PROPRIETARY_CFG*)&nfa_proprietary_cfg_default;
+
+

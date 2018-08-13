@@ -47,6 +47,8 @@
 #include "nfa_ee_api.h"
 #include "nfa_sys.h"
 
+#include <phNxpNciHal.h>
+
 /*****************************************************************************
 **  Constants and data types
 *****************************************************************************/
@@ -122,11 +124,8 @@ enum
 };
 typedef UINT8 tNFA_EE_CONN_ST;
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 #define NFA_EE_MAX_AID_CFG_LEN  (580)
-#else
-#define NFA_EE_MAX_AID_CFG_LEN  (160)
-#endif
+#define NFA_EE_MAX_AID_CFG_LEN_PN547C2  (160)
 #else
 #define NFA_EE_MAX_AID_CFG_LEN  (510)
 #endif

@@ -42,23 +42,37 @@ extern "C"
     #include "linux_nfc_api.h"
 }
 
+#define MAX_TAGS_DISCOVERED   0x11U
+
 typedef struct activationParams{
     int mTechParams;
     int mTechLibNfcTypes;
 } activationParams_t;
 
+typedef struct discoveryInfo
+{
+    int mDiscList [MAX_TAGS_DISCOVERED]; //array of Discovered NFC technologies according to NFC service
+    int mDiscHandles [MAX_TAGS_DISCOVERED]; //array of tag handles according to NFC service
+    int mDiscNfcTypes [MAX_TAGS_DISCOVERED]; //array of detailed tag types according to NFC service
+    tNFC_RF_TECH_PARAMS mDiscParams [MAX_TAGS_DISCOVERED];
+}discoveryInfo_t;
+
 class NfcTag
 {
 public:
     enum ActivationState {Idle, Sleep, Active};
+    discoveryInfo_t mDiscInfo;
     static const int MAX_NUM_TECHNOLOGY = 11; //max number of technologies supported by one or more tags
     int mTechList [MAX_NUM_TECHNOLOGY]; //array of NFC technologies according to NFC service
     int mTechHandles [MAX_NUM_TECHNOLOGY]; //array of tag handles according to NFC service
     int mTechLibNfcTypes [MAX_NUM_TECHNOLOGY]; //array of detailed tag types according to NFC service
     int mNumTechList; //current number of NFC technologies in the list
     int mNumDiscNtf;
+    int mNumTags;
     int mNumDiscTechList;
-    int mTechListIndex;
+    int mSelectedIndex;
+    int mActivationIndex;
+
     bool mNfcDisableinProgress;
     bool mCashbeeDetected;
     bool mEzLinkTypeTag;
@@ -225,12 +239,24 @@ public:
     **
     ** Function:        selectNextTag
     **
-    ** Description:     When multiple tags are discovered, selects the Nex one to activate.
+    ** Description:     When multiple tags are discovered, selects the Next one to activate.
     **
     ** Returns:         None
     **
     *******************************************************************************/
     void selectNextTag ();
+
+    /*******************************************************************************
+    **
+    ** Function:        selectTag
+    **
+    ** Description:     When multiple tags are discovered, selects the Tag with
+    ** 					the tagHandle to activate.
+    **
+    ** Returns:         None
+    **
+    *******************************************************************************/
+    void selectTag (int tagHandle);
 
     /*******************************************************************************
     **
@@ -441,6 +467,16 @@ public:
     *******************************************************************************/
     void getTypeATagUID(UINT8 **uid, UINT32 *len);
 
+    /*******************************************************************************
+    **
+    ** Function:        getTypeASelRsp
+    **
+    ** Description:     Get the Select Response of TypeA Tag.
+    **
+    ** Returns:         SAK in case of TypeA Tag otherwise NULL..
+    **
+    *******************************************************************************/
+    void getTypeASelRsp(UINT8 *p_sel_rsp);
 
     /*******************************************************************************
     **
@@ -484,6 +520,17 @@ public:
     **
     *******************************************************************************/
     void storeActivationParams();
+
+    /*******************************************************************************
+    **
+    ** Function:        resetTechnologies
+    **
+    ** Description:     Clear all data related to the Discovery Information of the tag.
+    **
+    ** Returns:         None
+    **
+    *******************************************************************************/
+    void resetDiscInfo (void);
 
 private:
     //std::vector<int> mTechnologyTimeoutsTable;
@@ -545,6 +592,24 @@ private:
     *******************************************************************************/
     void discoverTechnologies (tNFA_DISC_RESULT& discoveryData);
 
+    /*******************************************************************************
+    **
+    ** Function:        processNotification
+    **
+    ** Description:     Process the Notification during the Discovery or Activation
+    **                  of the technologies that NFC service needs by interpreting
+    **                  the data structures from the stack.
+    **                  protocol: protocol data from discovery/activation events(s).
+    **                  rf_disc_id: rf_disc_id data from discovery/activation events(s).
+    **                  rf_tech_param: rf_tech_param data from discovery/activation events(s).
+    **                  activation: true if activation events(s) else discovery.
+    **
+    ** Returns:         Number of Technologies Identified
+    **
+    *******************************************************************************/
+    int processNotification (UINT8 protocol, UINT8 rf_disc_id,
+                    tNFC_RF_TECH_PARAMS rf_tech_param, BOOLEAN activation,
+                       tNFA_ACTIVATED& activationData);
 
     /*******************************************************************************
     **

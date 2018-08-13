@@ -249,15 +249,15 @@ NFCSTATUS EXTNS_MfcPresenceCheck(void)
 **                  NFCSTATUS_FAILED otherwise
 **
 *******************************************************************************/
-NFCSTATUS EXTNS_MfcSetReadOnly(void)
+NFCSTATUS EXTNS_MfcSetReadOnly (uint8_t *key, uint8_t len)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
 
     phLibNfc_Message_t msg;
 
     msg.eMsgType = PH_NXPEXTNS_MIFARE_READ_ONLY;
-    msg.pMsgData = NULL;
-    msg.Size = 0;
+    msg.pMsgData = key;
+    msg.Size = len;
 
     status = phNxpExtns_SendMsg(&msg);
     if( NFCSTATUS_SUCCESS != status )
@@ -457,8 +457,8 @@ NFCSTATUS EXTNS_MfcInit(tNFA_ACTIVATED activationData)
 **                  NFCSTATUS_FAILED otherwise
 **
 *******************************************************************************/
-static NFCSTATUS phNxpExtns_ProcessSysMessage(phLibNfc_Message_t * msg){
-
+static NFCSTATUS phNxpExtns_ProcessSysMessage (phLibNfc_Message_t *msg)
+{
     NFCSTATUS status = NFCSTATUS_SUCCESS;
 
     if(gphNxpExtns_Context.Extns_status == EXTNS_STATUS_CLOSE)
@@ -505,7 +505,7 @@ static NFCSTATUS phNxpExtns_ProcessSysMessage(phLibNfc_Message_t * msg){
             break;
 
         case PH_NXPEXTNS_MIFARE_READ_ONLY:
-            status = Mfc_SetReadOnly();
+            status = Mfc_SetReadOnly (msg->pMsgData, msg->Size);
             break;
         case PH_NXPEXTNS_MIFARE_PRESENCE_CHECK:
             pthread_mutex_init(&gAuthCmdBuf.syncmutex, NULL);

@@ -68,11 +68,7 @@ void nfcFactory_testMode_close (void)
 
 int nfcFactory_PrbsTestStart (nfcFactory_PRBSTech_t tech, nfcFactory_PRBSBitrate_t bitrate)
 {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
     return phNxpNciHal_PrbsTestStart(NFC_HW_PRBS, NFC_HW_PRBS15, tech, bitrate);
-#else
-    return phNxpNciHal_PrbsTestStart(tech, bitrate);
-#endif
 }
 
 

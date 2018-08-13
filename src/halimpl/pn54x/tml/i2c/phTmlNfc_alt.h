@@ -26,6 +26,7 @@
  *  1 = OM557x on Raspberry Pi
  *  2 = OM557x on UdooNeo
  *  3 = OM557x on BeagleBone black
+ *
  */
 #define CONFIGURATION    1
 
@@ -42,7 +43,7 @@
  #define PIN_INT         105
  #define PIN_ENABLE      149
 #elif (CONFIGURATION == 3)
-/* OM557x on BeagleBone black */
+/* OM557x on BeagleBone Black */
  #define I2C_BUS         "/dev/i2c-2"
  #define I2C_ADDRESS     0x28
  #define PIN_INT         61

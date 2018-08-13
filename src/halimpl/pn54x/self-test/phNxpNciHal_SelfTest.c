@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 NXP Semiconductors
+ * Copyright (C) 2015 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,24 @@
 
 #ifdef NXP_HW_SELF_TEST
 
-
 #include <phNxpNciHal_SelfTest.h>
 #include <phNxpLog.h>
 #include <pthread.h>
 #include <phOsalNfc_Timer.h>
+#include <phNxpConfig.h>
 
-#define HAL_WRITE_RSP_TIMEOUT   (2000)   /* Timeout value to wait for response from PN54X */
+/* Timeout value to wait for response from PN54X */
+#define HAL_WRITE_RSP_TIMEOUT (2000)
 #define HAL_WRITE_MAX_RETRY     (10)
+#define CORE_INIT_NCI2_0 false
 
+#define NXP_NFCC_RESET_RSP_LEN  (0x11U) //for PN553 and PN557 (0x10U) else (0x11U)
+#define NFCC_EXP_NTF_LEN_NULL    0x00
+#define NFCC_EXP_NTF_DATA_NULL   0x00
+#define NFCC_CMD_NCI20_LEN       0x05
+#define NFCC_CMD_NCI10_LEN       0x03
+#define NFCC_EXP_RES_DATA_BYTE2 ((phNxpNciHal_getChipType() == pn547C2) ? 0x17 : 0x19)
+#define NXP_NFCC_HW_ANTENNA_LOOP4_SELF_TEST (0x01U) //for PN553 and PN557 (0x00U) else (0x01U)
 /******************* Structures and definitions *******************************/
 
 typedef uint8_t (*st_validator_t)(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
@@ -39,7 +48,15 @@ typedef struct nci_test_data
     st_validator_t rsp_validator;
     st_validator_t ntf_validator;
 
-}nci_test_data_t;
+} nci_test_data_t;
+
+typedef struct selftest_hdlr
+{
+    bool_t wait_for_ntf;
+    uint8_t nci_version;
+    phTmlNfc_TransactInfo_t mTransInfo;
+} selftest_hdlr_t;
+selftest_hdlr_t mSelfTestHdlr;
 
 /******************* Global variables *****************************************/
 
@@ -55,39 +72,49 @@ extern phNxpNciHal_Control_t nxpncihal_ctrl;
 
 /* Driver parameters */
 phLibNfc_sConfig_t   gDrvCfg;
+const static uint8_t nfcc_core_reset_nci20_rsp[] = NCI_CORE_RESET_NCI20_RSP;
+const static uint8_t nfcc_core_reset_nci20_ntf[] = NCI_CORE_RESET_NCI20_NTF;
+const static uint8_t nfcc_core_init_nci20_cmd[] = NCI_CORE_INIT_NCI20_CMD;
+const static uint8_t nfcc_core_init_nci20_rsp[] = NCI_CORE_INIT_NCI20_RSP;
+const static uint8_t nfcc_core_init_nci10_cmd[] = NCI_CORE_INIT_NCI10_CMD;
+uint8_t nfcc_power_mgt_cmd[] = SYSTEM_SET_POWERMGT_CMD;
+uint8_t nfcc_power_mgt_rsp[] = SYSTEM_SET_POWERMGT_RSP;
 
 NFCSTATUS gtxldo_status = NFCSTATUS_FAILED;
 NFCSTATUS gagc_value_status = NFCSTATUS_FAILED;
 NFCSTATUS gagc_nfcld_status = NFCSTATUS_FAILED;
 NFCSTATUS gagc_differential_status = NFCSTATUS_FAILED;
 
-
-static uint8_t st_validator_testEquals(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
+static uint8_t st_validator_testEquals(nci_data_t* exp,
+                                       phTmlNfc_TransactInfo_t* act);
 static uint8_t st_validator_null(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
-static uint8_t st_validator_testSWP1_vltg(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
-static uint8_t st_validator_testAntenna_Txldo(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
-static uint8_t st_validator_testAntenna_AgcVal(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
-static uint8_t st_validator_testAntenna_AgcVal_FixedNfcLd(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
-static uint8_t st_validator_testAntenna_AgcVal_Differential(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
+static uint8_t st_validator_testSWP1_vltg(nci_data_t* exp,
+        phTmlNfc_TransactInfo_t* act);
+static uint8_t st_validator_testAntenna_Txldo(nci_data_t* exp,
+        phTmlNfc_TransactInfo_t* act);
+static uint8_t st_validator_testAntenna_AgcVal(nci_data_t* exp,
+        phTmlNfc_TransactInfo_t* act);
+static uint8_t st_validator_testAntenna_AgcVal_FixedNfcLd(
+    nci_data_t* exp, phTmlNfc_TransactInfo_t* act);
+static uint8_t st_validator_testAntenna_AgcVal_Differential(
+    nci_data_t* exp, phTmlNfc_TransactInfo_t* act);
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-NFCSTATUS phNxpNciHal_getPrbsCmd (phNxpNfc_PrbsType_t prbs_type, phNxpNfc_PrbsHwType_t hw_prbs_type,
-        uint8_t tech, uint8_t bitrate, uint8_t *prbs_cmd, uint8_t prbs_cmd_len);
-#else
-NFCSTATUS phNxpNciHal_getPrbsCmd (uint8_t tech, uint8_t bitrate, uint8_t *prbs_cmd, uint8_t prbs_cmd_len);
-#endif
+NFCSTATUS phNxpNciHal_getPrbsCmd(phNxpNfc_PrbsType_t prbs_type,
+                                 phNxpNfc_PrbsHwType_t hw_prbs_type,
+                                 uint8_t tech, uint8_t bitrate,
+                                 uint8_t* prbs_cmd, uint8_t prbs_cmd_len);
+
+static NFCSTATUS phNxpNciHal_initialize_chipType();
+
 /* Test data to validate SWP line 2*/
-static nci_test_data_t swp2_test_data[] = {
+static nci_test_data_t swp2_test_data[] =
+{
     {
         {
-            0x04, {0x20,0x00,0x01,0x01} /* cmd */
+            0x04, {0x20, 0x00, 0x01, 0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x01} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x01} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -97,18 +124,10 @@ static nci_test_data_t swp2_test_data[] = {
     },
     {
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x20,0x01,0x02,0x00,0x00} /* cmd */
-#else
             0x03, {0x20,0x01,0x00}
-#endif
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x4, {0x40,0x01,0x19,0x00 } /* exp_rsp */
-#else
-            0x4, {0x40,0x01,0x17,0x00 }
-#endif
+            0x4, {0x40, 0x01, 0x19, 0x00}
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -146,18 +165,14 @@ static nci_test_data_t swp2_test_data[] = {
 };
 
 /* Test data to validate SWP line 1*/
-static nci_test_data_t swp1_test_data[] = {
-
+static nci_test_data_t swp1_test_data[] =
+{
     {
         {
-            0x04, {0x20,0x00,0x01,0x01} /* cmd */
+            0x04, {0x20, 0x00, 0x01, 0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x01} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x01} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -167,18 +182,10 @@ static nci_test_data_t swp1_test_data[] = {
     },
     {
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x20,0x01,0x02,0x00,0x00} /* cmd */
-#else
             0x03, {0x20,0x01,0x00}
-#endif
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
             0x4, {0x40,0x01,0x19,0x00 } /* exp_rsp */
-#else
-            0x4, {0x40,0x01,0x17,0x00 }
-#endif
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -215,17 +222,14 @@ static nci_test_data_t swp1_test_data[] = {
     },
 };
 
-static nci_test_data_t prbs_test_data[] = {
+static nci_test_data_t prbs_test_data[10] =
+{
     {
         {
             0x04, {0x20,0x00,0x01,0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x00} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x00} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -235,54 +239,28 @@ static nci_test_data_t prbs_test_data[] = {
     },
     {
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
             0x03, {0x20,0x01,0x00} /* cmd */
-#else
-            0x03, {0x20,0x01,0x00} /* cmd */
-#endif
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
             0x4, {0x40,0x01,0x19,0x00 } /* exp_rsp */
-#else
-            0x4, {0x40,0x01,0x17,0x00 } /* exp_rsp */
-#endif
         },
         {
             0x00, {0x00} /* ext_ntf */
         },
         st_validator_testEquals, /* validator */
         st_validator_null
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    },
-    {
-        {
-            0x04, {0x2F,0x00,0x01,0x00} /* cmd */
-        },
-        {
-            0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-#endif
     }
 };
 
 /* for rf field test, first requires to disable the standby mode */
-static nci_test_data_t rf_field_on_test_data[] = {
+static nci_test_data_t rf_field_on_test_data[10] =
+{
     {
         {
             0x04, {0x20,0x00,0x01,0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x00} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x00} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -292,18 +270,10 @@ static nci_test_data_t rf_field_on_test_data[] = {
     },
     {
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x20,0x01,0x02,0x00,0x00} /* cmd */
-#else
             0x03, {0x20,0x01,0x00} /* cmd */
-#endif
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
             0x4, {0x40,0x01,0x19,0x00 } /* exp_rsp */
-#else
-            0x4, {0x40,0x01,0x17,0x00 } /* exp_rsp */
-#endif
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -311,79 +281,16 @@ static nci_test_data_t rf_field_on_test_data[] = {
         st_validator_testEquals, /* validator */
         st_validator_null
     },
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    {
-         {
-            0x03, {0x2F,0x02,0x00} /* cmd */
-         },
-         {
-            0x04, {0x4F,0x02,0x05,0x00} /* exp_rsp */
-         },
-         {
-            0x00, {0x00} /* ext_ntf */
-         },
-         st_validator_testEquals, /* validator */
-         st_validator_null
-    },
-    {
-         {
-            0x04, {0x2F,0x00,0x01,0x00} /* cmd */
-         },
-         {
-            0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-         },
-         {
-            0x00, {0x00} /* ext_ntf */
-         },
-         st_validator_testEquals, /* validator */
-         st_validator_null
-    },
-#endif
-    {
-        {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x2F,0x3D,0x02,0x20,0x01} /* cmd */
-#else
-            0x08, {0x2F,0x3D,0x05,0x20,0x01,0x00,0x00,0x00} /* cmd */
-#endif
-        },
-        {
-            0x04, {0x4F,0x3D,0x05,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    },
-    {
-        {
-            0x04, {0x2F,0x00,0x01,0x01} /* cmd */
-        },
-        {
-            0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-#endif
-    }
 };
 
-static nci_test_data_t rf_field_off_test_data[] = {
+static nci_test_data_t rf_field_off_test_data[10] =
+{
     {
         {
             0x04, {0x20,0x00,0x01,0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x00} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x00} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -393,18 +300,10 @@ static nci_test_data_t rf_field_off_test_data[] = {
     },
     {
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x20,0x01,0x02,0x00,0x00} /* cmd */
-#else
             0x03, {0x20,0x01,0x00} /* cmd */
-#endif
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x4, {0x40,0x01,0x19,0x00 } /* exp_rsp */
-#else
-            0x4, {0x40,0x01,0x17,0x00 } /* exp_rsp */
-#endif
+            0x4, {0x40, 0x01, 0x19, 0x00}                          /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -412,80 +311,17 @@ static nci_test_data_t rf_field_off_test_data[] = {
         st_validator_testEquals, /* validator */
         st_validator_null
     },
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    {
-        {
-            0x03, {0x2F,0x02,0x00} /* cmd */
-        },
-        {
-            0x04, {0x4F,0x02,0x05,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-     },
-     {
-        {
-             0x04, {0x2F,0x00,0x01,0x00} /* cmd */
-        },
-        {
-             0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-        },
-        {
-             0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-     },
-#endif
-     {
-        {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x2F,0x3D,0x02,0x20,0x00} /* cmd */
-#else
-            0x08, {0x2F,0x3D,0x05,0x20,0x00,0x00,0x00,0x00} /* cmd */
-#endif
-        },
-        {
-            0x04, {0x4F,0x3D,0x05,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-     },
-     {
-        {
-            0x04, {0x2F,0x00,0x01,0x01} /* cmd */
-        },
-        {
-            0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-#endif
-     }
 };
 
 /* Download pin test data 1 */
-static nci_test_data_t download_pin_test_data1[] = {
+static nci_test_data_t download_pin_test_data1[] =
+{
     {
         {
-            0x04, {0x20,0x00,0x01,0x01} /* cmd */
+            0x04, {0x20, 0x00, 0x01, 0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x01} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x01} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -496,7 +332,8 @@ static nci_test_data_t download_pin_test_data1[] = {
 };
 
 /* Download pin test data 2 */
-static nci_test_data_t download_pin_test_data2[] = {
+static nci_test_data_t download_pin_test_data2[] =
+{
     {
         {
             0x08, {0x00, 0x04, 0xD0, 0x11, 0x00, 0x00, 0x5B, 0x46} /* cmd */
@@ -512,17 +349,14 @@ static nci_test_data_t download_pin_test_data2[] = {
     },
 };
 /* Antenna self test data*/
-static nci_test_data_t antenna_self_test_data[] = {
+static nci_test_data_t antenna_self_test_data[10] =
+{
     {
         {
             0x04, {0x20,0x00,0x01,0x00} /* cmd */
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x06, {0x40,0x00,0x03,0x00,0x11,0x00} /* exp_rsp */
-#else
-            0x06, {0x40,0x00,0x03,0x00,0x10,0x00} /* exp_rsp */
-#endif
+            0x06, {0x40, 0x00, 0x03, 0x00, NXP_NFCC_RESET_RSP_LEN, 0x00} /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -532,18 +366,10 @@ static nci_test_data_t antenna_self_test_data[] = {
     },
     {
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x05, {0x20,0x01,0x02,0x00,0x00} /* cmd */
-#else
             0x03, {0x20,0x01,0x00} /* cmd */
-#endif
         },
         {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x4, {0x40,0x01,0x19,0x00 } /* exp_rsp */
-#else
-            0x4, {0x40,0x01,0x17,0x00 } /* exp_rsp */
-#endif
+            0x4, {0x40, 0x01, 0x19, 0x00}                          /* exp_rsp */
         },
         {
             0x00, {0x00} /* ext_ntf */
@@ -563,141 +389,67 @@ static nci_test_data_t antenna_self_test_data[] = {
         },
         st_validator_testEquals, /* validator */
         st_validator_null
-    },
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    {
-        {
-            0x04, {0x2F,0x00,0x01,0x00} /* cmd */
-        },
-        {
-            0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-    },
-#endif
-    {
-        {
-            0x05, {0x2F, 0x3D, 0x02, 0x01, 0x80} /* TxLDO cureent measurement cmd */
-        },
-        {
-            0x03, {0x4F, 0x3D, 05} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testAntenna_Txldo,
-        st_validator_null
-    },
-    {
-        {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            0x07, {0x2F, 0x3D, 0x04, 0x02, 0xC8, 0x60, 0x03} /* AGC measurement cmd */
-#else
-            0x07, {0x2F, 0x3D, 0x04, 0x02, 0xCD, 0x60, 0x03} /* AGC measurement cmd */
-#endif
-        },
-        {
-            0x03, {0x4F, 0x3D, 05} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testAntenna_AgcVal,
-        st_validator_null
-    },
-    {
-        {
-            0x07, {0x2F, 0x3D, 0x04, 0x04, 0x20, 0x08, 0x20} /* AGC with NFCLD measurement cmd */
-        },
-        {
-            0x03, {0x4F, 0x3D, 05} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testAntenna_AgcVal_FixedNfcLd,
-        st_validator_null
-    },
-    {
-        {
-            0x07, {0x2F, 0x3D, 0x04, 0x08, 0x8C, 0x60, 0x03} /* AGC with NFCLD measurement cmd */
-        },
-        {
-            0x03, {0x4F, 0x3D, 05} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testAntenna_AgcVal_Differential,
-        st_validator_null
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    },
-    {
-        {
-            0x04, {0x2F,0x00,0x01,0x01} /* cmd */
-        },
-        {
-            0x04, {0x4F,0x00,0x01,0x00} /* exp_rsp */
-        },
-        {
-            0x00, {0x00} /* ext_ntf */
-        },
-        st_validator_testEquals, /* validator */
-        st_validator_null
-#endif
     }
 };
 
-
 /************** Self test functions ***************************************/
 
-static uint8_t st_validator_testEquals(nci_data_t *exp, phTmlNfc_TransactInfo_t *act);
+static uint8_t st_validator_testEquals(nci_data_t* exp,
+                                       phTmlNfc_TransactInfo_t* act);
 static void hal_write_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo);
 static void hal_write_rsp_timeout_cb(uint32_t TimerId, void *pContext);
 static void hal_read_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo);
 
 /*******************************************************************************
-**
-** Function         st_validator_null
-**
-** Description      Null Validator
-**
-** Returns          One
-**
-*******************************************************************************/
-static uint8_t st_validator_null(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
-{
-    UNUSED(exp);
-    UNUSED(act);
-    return 1;
-}
-
-/*******************************************************************************
-**
-** Function         st_validator_testSWP1_vltg
-**
-** Description      Validator function to validate swp1 connection.
-**
-** Returns          One if successful otherwise Zero.
-**
-*******************************************************************************/
-static uint8_t st_validator_testSWP1_vltg(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
+ **
+ ** Function         st_validator_null
+ **
+ ** Description      Null Validator
+ **
+ ** Returns          One
+ **
+ *******************************************************************************/
+static uint8_t st_validator_null(nci_data_t* exp,
+                                 phTmlNfc_TransactInfo_t* act)
 {
     uint8_t result = 0;
 
-    if(NULL == exp || NULL == act)
+    if (NULL == exp || NULL == act)
+    {
+        return result;
+    }
+
+    if (exp->len <= act->wLength &&
+            (memcmp(exp->p_data, act->pBuff, exp->len) == 0))
+    {
+        result = 1;
+    }
+    return result;
+}
+
+/*******************************************************************************
+ **
+ ** Function         st_validator_testSWP1_vltg
+ **
+ ** Description      Validator function to validate swp1 connection.
+ **
+ ** Returns          One if successful otherwise Zero.
+ **
+ *******************************************************************************/
+static uint8_t st_validator_testSWP1_vltg(nci_data_t* exp,
+        phTmlNfc_TransactInfo_t* act)
+{
+    uint8_t result = 0;
+
+    if (NULL == exp || NULL == act)
     {
         return result;
     }
 
     if( (act->wLength == 0x05) &&
-            (memcmp(exp->p_data,act->pBuff,exp->len) == 0))
+            (memcmp(exp->p_data, act->pBuff, exp->len) == 0))
     {
-        if(act->pBuff[4] == 0x01 || act->pBuff[4] == 0x02)
+        if (act->pBuff[4] == 0x01 || act->pBuff[4] == 0x02)
         {
             result = 1;
         }
@@ -707,22 +459,24 @@ static uint8_t st_validator_testSWP1_vltg(nci_data_t *exp, phTmlNfc_TransactInfo
 }
 
 /*******************************************************************************
-**
-** Function         st_validator_testAntenna_Txldo
-**
-** Description      Validator function to validate Antenna TxLDO current measurement.
-**
-** Returns          One if successful otherwise Zero.
-**
-*******************************************************************************/
-static uint8_t st_validator_testAntenna_Txldo(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
+ **
+ ** Function         st_validator_testAntenna_Txldo
+ **
+ ** Description      Validator function to validate Antenna TxLDO current
+ **                  measurement.
+ **
+ ** Returns          One if successful otherwise Zero.
+ **
+ *******************************************************************************/
+static uint8_t st_validator_testAntenna_Txldo(nci_data_t* exp,
+        phTmlNfc_TransactInfo_t* act)
 {
     uint8_t result = 0;
     uint8_t mesuredrange =0;
     long measured_val = 0;
     int tolerance = 0;
 
-    if(NULL == exp || NULL == act)
+    if (NULL == exp || NULL == act)
     {
         return result;
     }
@@ -733,27 +487,33 @@ static uint8_t st_validator_testAntenna_Txldo(nci_data_t *exp, phTmlNfc_Transact
         if (NFCSTATUS_SUCCESS == act->pBuff[3])
         {
             result = 1;
-            NXPLOG_NCIHAL_D("Antenna: TxLDO current measured raw value in mA : 0x%x", act->pBuff[4]);
-            if(0x00 == act->pBuff[5])
+            NXPLOG_NCIHAL_D("Antenna: TxLDO current measured raw value in mA : 0x%x",
+                            act->pBuff[4]);
+            if (0x00 == act->pBuff[5])
             {
                 NXPLOG_NCIHAL_D("Measured range : 0x00 = 50 - 100 mA");
                 measured_val = ((0.40 * act->pBuff[4]) + 50);
-                NXPLOG_NCIHAL_D("TxLDO current absolute value in mA = %ld", measured_val);
+                NXPLOG_NCIHAL_D("TxLDO current absolute value in mA = %ld",
+                                measured_val);
             }
             else
             {
                 NXPLOG_NCIHAL_D("Measured range : 0x01 = 20 - 70 mA");
                 measured_val = ((0.40 * act->pBuff[4]) + 20);
-                NXPLOG_NCIHAL_D("TxLDO current absolute value in mA = %ld", measured_val);
+                NXPLOG_NCIHAL_D("TxLDO current absolute value in mA = %ld",
+                                measured_val);
             }
 
             tolerance = (phAntenna_resp.wTxdoMeasuredRangeMax  *
-                         phAntenna_resp.wTxdoMeasuredTolerance)/100;
+                         phAntenna_resp.wTxdoMeasuredTolerance) /
+                        100;
             if ((measured_val <= phAntenna_resp.wTxdoMeasuredRangeMax + tolerance))
             {
                 tolerance = (phAntenna_resp.wTxdoMeasuredRangeMin *
-                             phAntenna_resp.wTxdoMeasuredTolerance)/100;
-                if((measured_val >= phAntenna_resp.wTxdoMeasuredRangeMin - tolerance))
+                             phAntenna_resp.wTxdoMeasuredTolerance) /
+                            100;
+                if ((measured_val >=
+                        phAntenna_resp.wTxdoMeasuredRangeMin - tolerance))
                 {
                     gtxldo_status = NFCSTATUS_SUCCESS;
                     NXPLOG_NCIHAL_E("Test Antenna Response for TxLDO measurement PASS");
@@ -773,35 +533,40 @@ static uint8_t st_validator_testAntenna_Txldo(nci_data_t *exp, phTmlNfc_Transact
         else
         {
             gtxldo_status = NFCSTATUS_FAILED;
-            NXPLOG_NCIHAL_E("Test Antenna Response for TxLDO measurement failed: Invalid status");
+            NXPLOG_NCIHAL_E(
+                "Test Antenna Response for TxLDO measurement failed: Invalid status");
         }
 
     }
     else
     {
         gtxldo_status = NFCSTATUS_FAILED;
-        NXPLOG_NCIHAL_E("Test Antenna Response for TxLDO measurement failed: Invalid payload length");
+        NXPLOG_NCIHAL_E(
+            "Test Antenna Response for TxLDO measurement failed: Invalid payload "
+            "length");
     }
 
     return result;
 }
 
 /*******************************************************************************
-**
-** Function         st_validator_testAntenna_AgcVal
-**
-** Description      Validator function reads AGC value of antenna and print the info
-**
-** Returns          One if successful otherwise Zero.
-**
-*******************************************************************************/
-static uint8_t st_validator_testAntenna_AgcVal(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
+ **
+ ** Function         st_validator_testAntenna_AgcVal
+ **
+ ** Description      Validator function reads AGC value of antenna and print the
+ **                  info
+ **
+ ** Returns          One if successful otherwise Zero.
+ **
+ *******************************************************************************/
+static uint8_t st_validator_testAntenna_AgcVal(nci_data_t* exp,
+        phTmlNfc_TransactInfo_t* act)
 {
     uint8_t result = 0;
     int agc_tolerance = 0;
     long agc_val = 0;
 
-    if(NULL == exp || NULL == act)
+    if (NULL == exp || NULL == act)
     {
         return result;
     }
@@ -811,11 +576,12 @@ static uint8_t st_validator_testAntenna_AgcVal(nci_data_t *exp, phTmlNfc_Transac
         if (NFCSTATUS_SUCCESS == act->pBuff[3])
         {
             result = 1;
-            agc_tolerance = (phAntenna_resp.wAgcValue * phAntenna_resp.wAgcValueTolerance)/100;
+            agc_tolerance =
+                (phAntenna_resp.wAgcValue * phAntenna_resp.wAgcValueTolerance) / 100;
             agc_val =  ((act->pBuff[5] << 8) | (act->pBuff[4]));
             NXPLOG_NCIHAL_D("AGC value : %ld", agc_val);
             if(((phAntenna_resp.wAgcValue - agc_tolerance) <= agc_val) &&
-               (agc_val <= (phAntenna_resp.wAgcValue + agc_tolerance)))
+                    (agc_val <= (phAntenna_resp.wAgcValue + agc_tolerance)))
             {
                 gagc_value_status = NFCSTATUS_SUCCESS;
                 NXPLOG_NCIHAL_E("Test Antenna Response for AGC Values  PASS");
@@ -835,79 +601,92 @@ static uint8_t st_validator_testAntenna_AgcVal(nci_data_t *exp, phTmlNfc_Transac
     else
     {
         gagc_value_status = NFCSTATUS_FAILED;
-        NXPLOG_NCIHAL_E("Test Antenna Response for AGC value failed: Invalid payload length");
+        NXPLOG_NCIHAL_E(
+            "Test Antenna Response for AGC value failed: Invalid payload length");
     }
 
     return result;
 }
 /*******************************************************************************
-**
-** Function         st_validator_testAntenna_AgcVal_FixedNfcLd
-**
-** Description      Validator function reads and print AGC value of
-**                  antenna with fixed NFCLD
-**
-** Returns          One if successful otherwise Zero.
-**
-*******************************************************************************/
-static uint8_t st_validator_testAntenna_AgcVal_FixedNfcLd(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
+ **
+ ** Function         st_validator_testAntenna_AgcVal_FixedNfcLd
+ **
+ ** Description      Validator function reads and print AGC value of
+ **                  antenna with fixed NFCLD
+ **
+ ** Returns          One if successful otherwise Zero.
+ **
+ *******************************************************************************/
+static uint8_t st_validator_testAntenna_AgcVal_FixedNfcLd(
+    nci_data_t* exp, phTmlNfc_TransactInfo_t* act)
 {
     uint8_t result = 0;
     int agc_nfcld_tolerance = 0;
     long agc_nfcld = 0;
 
-    if(NULL == exp || NULL == act)
+    if (NULL == exp || NULL == act)
     {
         return result;
     }
 
-    if(0x05 == act->pBuff[2])
+    if (0x05 == act->pBuff[2])
     {
-        if(NFCSTATUS_SUCCESS == act->pBuff[3])
+        if (NFCSTATUS_SUCCESS == act->pBuff[3])
         {
             result = 1;
             agc_nfcld_tolerance = (phAntenna_resp.wAgcValuewithfixedNFCLD *
-                                   phAntenna_resp.wAgcValuewithfixedNFCLDTolerance)/100;
+                                   phAntenna_resp.wAgcValuewithfixedNFCLDTolerance) /
+                                  100;
             agc_nfcld =  ((act->pBuff[5] << 8) | (act->pBuff[4]));
             NXPLOG_NCIHAL_D("AGC value with Fixed Nfcld  : %ld", agc_nfcld);
 
-            if(((phAntenna_resp.wAgcValuewithfixedNFCLD - agc_nfcld_tolerance) <= agc_nfcld) &&
-              (agc_nfcld <= (phAntenna_resp.wAgcValuewithfixedNFCLD + agc_nfcld_tolerance)))
+            if (((phAntenna_resp.wAgcValuewithfixedNFCLD - agc_nfcld_tolerance) <=
+                    agc_nfcld) &&
+                    (agc_nfcld <=
+                     (phAntenna_resp.wAgcValuewithfixedNFCLD + agc_nfcld_tolerance)))
             {
                 gagc_nfcld_status = NFCSTATUS_SUCCESS;
-                NXPLOG_NCIHAL_E("Test Antenna Response for AGC value with fixed NFCLD PASS");
+                NXPLOG_NCIHAL_E(
+                    "Test Antenna Response for AGC value with fixed NFCLD PASS");
             }
             else
             {
                 gagc_nfcld_status =  NFCSTATUS_FAILED;
-                NXPLOG_NCIHAL_E("Test Antenna Response for AGC value with fixed NFCLD FAIL");
+                NXPLOG_NCIHAL_E(
+                    "Test Antenna Response for AGC value with fixed NFCLD FAIL org Val = %d",
+                    phAntenna_resp.wAgcValuewithfixedNFCLD);
             }
         }
         else
         {
             gagc_nfcld_status =  NFCSTATUS_FAILED;
-            NXPLOG_NCIHAL_E("Test Antenna Response for AGC value with fixed NFCLD failed: Invalid status");
+            NXPLOG_NCIHAL_E(
+                "Test Antenna Response for AGC value with fixed NFCLD failed: "
+                "Invalid status");
         }
     }
     else
     {
         gagc_nfcld_status =  NFCSTATUS_FAILED;
-        NXPLOG_NCIHAL_E("Test Antenna Response for AGC value with fixed NFCLD failed: Invalid payload length");
+        NXPLOG_NCIHAL_E(
+            "Test Antenna Response for AGC value with fixed NFCLD failed: Invalid "
+            "payload length");
     }
 
     return result;
 }
 
 /*******************************************************************************
-**
-** Function         st_validator_testAntenna_AgcVal_Differential
-**
-** Description      Reads the AGC value with open/short RM from buffer and print
-**
-** Returns          One if successful otherwise Zero.
-**
-*******************************************************************************/
-static uint8_t st_validator_testAntenna_AgcVal_Differential(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
+ **
+ ** Function         st_validator_testAntenna_AgcVal_Differential
+ **
+ ** Description      Reads the AGC value with open/short RM from buffer and print
+ **
+ ** Returns          One if successful otherwise Zero.
+ **
+ *******************************************************************************/
+static uint8_t st_validator_testAntenna_AgcVal_Differential(
+    nci_data_t* exp, phTmlNfc_TransactInfo_t* act)
 {
     uint8_t result = 0;
     int agc_toleranceopne1 = 0;
@@ -915,7 +694,7 @@ static uint8_t st_validator_testAntenna_AgcVal_Differential(nci_data_t *exp, phT
     long agc_differentialOpne1 = 0;
     long agc_differentialOpne2 = 0;
 
-    if(NULL == exp || NULL == act)
+    if (NULL == exp || NULL == act)
     {
         return result;
     }
@@ -926,18 +705,26 @@ static uint8_t st_validator_testAntenna_AgcVal_Differential(nci_data_t *exp, phT
         {
             result = 1;
             agc_toleranceopne1=(phAntenna_resp.wAgcDifferentialWithOpen1 *
-                                phAntenna_resp.wAgcDifferentialWithOpenTolerance1)/100;
+                                phAntenna_resp.wAgcDifferentialWithOpenTolerance1) /
+                               100;
             agc_toleranceopne2=(phAntenna_resp.wAgcDifferentialWithOpen2 *
-                                phAntenna_resp.wAgcDifferentialWithOpenTolerance2)/100;
+                                phAntenna_resp.wAgcDifferentialWithOpenTolerance2) /
+                               100;
             agc_differentialOpne1 =  ((act->pBuff[5] << 8) | (act->pBuff[4]));
             agc_differentialOpne2 =  ((act->pBuff[7] << 8) | (act->pBuff[6]));
-            NXPLOG_NCIHAL_D("AGC value differential Opne 1  : %ld", agc_differentialOpne1);
-            NXPLOG_NCIHAL_D("AGC value differentialOpne  2 : %ld", agc_differentialOpne2);
+            NXPLOG_NCIHAL_D("AGC value differential Opne 1  : %ld",
+                            agc_differentialOpne1);
+            NXPLOG_NCIHAL_D("AGC value differentialOpne  2 : %ld",
+                            agc_differentialOpne2);
 
-            if(((agc_differentialOpne1 >= phAntenna_resp.wAgcDifferentialWithOpen1 - agc_toleranceopne1) &&
-               (agc_differentialOpne1 <= phAntenna_resp.wAgcDifferentialWithOpen1 + agc_toleranceopne1)) &&
-               ((agc_differentialOpne2 >= phAntenna_resp.wAgcDifferentialWithOpen2 - agc_toleranceopne2) &&
-               (agc_differentialOpne2 <= phAntenna_resp.wAgcDifferentialWithOpen2 + agc_toleranceopne2)))
+            if (((agc_differentialOpne1 >=
+                    phAntenna_resp.wAgcDifferentialWithOpen1 - agc_toleranceopne1) &&
+                    (agc_differentialOpne1 <=
+                     phAntenna_resp.wAgcDifferentialWithOpen1 + agc_toleranceopne1)) &&
+                    ((agc_differentialOpne2 >=
+                      phAntenna_resp.wAgcDifferentialWithOpen2 - agc_toleranceopne2) &&
+                     (agc_differentialOpne2 <=
+                      phAntenna_resp.wAgcDifferentialWithOpen2 + agc_toleranceopne2)))
             {
                 gagc_differential_status = NFCSTATUS_SUCCESS;
                 NXPLOG_NCIHAL_E("Test Antenna Response for AGC Differential Open PASS");
@@ -945,44 +732,50 @@ static uint8_t st_validator_testAntenna_AgcVal_Differential(nci_data_t *exp, phT
             else
             {
                 gagc_differential_status = NFCSTATUS_FAILED;
-                NXPLOG_NCIHAL_E("Test Antenna Response for AGC Differential Open  FAIL");
+                NXPLOG_NCIHAL_E(
+                    "Test Antenna Response for AGC Differential Open  FAIL");
             }
         }
         else
         {
-            NXPLOG_NCIHAL_E("Test Antenna Response for AGC Differential failed: Invalid status");
+            NXPLOG_NCIHAL_E(
+                "Test Antenna Response for AGC Differential failed: Invalid status");
             gagc_differential_status = NFCSTATUS_FAILED;
         }
 
     }
     else
     {
-        NXPLOG_NCIHAL_E("Test Antenna Response for AGC Differential failed: Invalid payload length");
+        NXPLOG_NCIHAL_E(
+            "Test Antenna Response for AGC Differential failed: Invalid payload "
+            "length");
         gagc_differential_status = NFCSTATUS_FAILED;
     }
 
     return result;
 }
 /*******************************************************************************
-**
-** Function         st_validator_testEquals
-**
-** Description      Validator function to validate for equality between actual
-**                  and expected values.
-**
-** Returns          One if successful otherwise Zero.
-**
-*******************************************************************************/
-static uint8_t st_validator_testEquals(nci_data_t *exp, phTmlNfc_TransactInfo_t *act)
+ **
+ ** Function         st_validator_testEquals
+ **
+ ** Description      Validator function to validate for equality between actual
+ **                  and expected values.
+ **
+ ** Returns          One if successful otherwise Zero.
+ **
+ *******************************************************************************/
+static uint8_t st_validator_testEquals(nci_data_t* exp,
+                                       phTmlNfc_TransactInfo_t* act)
 {
     uint8_t result = 0;
 
-    if(NULL == exp || NULL == act)
+    if (NULL == exp || NULL == act)
     {
         return result;
     }
+
     if(exp->len <= act->wLength &&
-            (memcmp(exp->p_data,act->pBuff,exp->len) == 0))
+            (memcmp(exp->p_data, act->pBuff, exp->len) == 0))
     {
         result = 1;
     }
@@ -991,15 +784,15 @@ static uint8_t st_validator_testEquals(nci_data_t *exp, phTmlNfc_TransactInfo_t 
 }
 
 /*******************************************************************************
-**
-** Function         hal_write_rsp_timeout_cb
-**
-** Description      Callback function for hal write response timer.
-**
-** Returns          None
-**
-*******************************************************************************/
-static void hal_write_rsp_timeout_cb(uint32_t timerId, void *pContext)
+ **
+ ** Function         hal_write_rsp_timeout_cb
+ **
+ ** Description      Callback function for hal write response timer.
+ **
+ ** Returns          None
+ **
+ *******************************************************************************/
+static void hal_write_rsp_timeout_cb(uint32_t timerId, void* pContext)
 {
     UNUSED(timerId);
     NXPLOG_NCIHAL_E("hal_write_rsp_timeout_cb - write timeout!!!");
@@ -1008,18 +801,17 @@ static void hal_write_rsp_timeout_cb(uint32_t timerId, void *pContext)
 }
 
 /*******************************************************************************
-**
-** Function         hal_write_cb
-**
-** Description      Callback function for hal write.
-**
-** Returns          None
-**
-*******************************************************************************/
-static void hal_write_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo)
+ **
+ ** Function         hal_write_cb
+ **
+ ** Description      Callback function for hal write.
+ **
+ ** Returns          None
+ **
+ *******************************************************************************/
+static void hal_write_cb(void* pContext, phTmlNfc_TransactInfo_t* pInfo)
 {
     phNxpNciHal_Sem_t *p_cb_data = (phNxpNciHal_Sem_t*) pContext;
-
     if (pInfo->wStatus == NFCSTATUS_SUCCESS)
     {
         NXPLOG_NCIHAL_D("write successful status = 0x%x", pInfo->wStatus);
@@ -1031,24 +823,30 @@ static void hal_write_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo)
 
     p_cb_data->status = pInfo->wStatus;
     SEM_POST(p_cb_data);
-
     return;
 }
 
 /*******************************************************************************
-**
-** Function         hal_read_cb
-**
-** Description      Callback function for hal read.
-**
-** Returns          None
-**
-*******************************************************************************/
-static void hal_read_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo)
+ **
+ ** Function         hal_read_cb
+ **
+ ** Description      Callback function for hal read.
+ **
+ ** Returns          None
+ **
+ *******************************************************************************/
+static void hal_read_cb(void* pContext, phTmlNfc_TransactInfo_t* pInfo)
 {
-    phNxpNciHal_Sem_t *p_cb_data = (phNxpNciHal_Sem_t*) pContext;
     NFCSTATUS status;
-    if(hal_write_timer_fired == 1)
+    phNxpNciHal_Sem_t* p_cb_data = NULL;
+
+    if((pInfo == NULL) || (pContext == NULL))
+    {
+        NXPLOG_NCIHAL_E("Invalid params..! exiting...");
+        return;
+    }
+    p_cb_data = (phNxpNciHal_Sem_t*)pContext;
+    if (hal_write_timer_fired == 1)
     {
         NXPLOG_NCIHAL_D("hal_read_cb - response timeout occurred");
 
@@ -1058,8 +856,8 @@ static void hal_read_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo)
     }
     else
     {
-        NFCSTATUS status = phOsalNfc_Timer_Stop(timeoutTimerId);
 
+        NFCSTATUS status = phOsalNfc_Timer_Stop(timeoutTimerId);
         if (NFCSTATUS_SUCCESS == status)
         {
             NXPLOG_NCIHAL_D("Response timer stopped");
@@ -1069,10 +867,46 @@ static void hal_read_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo)
             NXPLOG_NCIHAL_E("Response timer stop ERROR!!!");
             p_cb_data->status  = NFCSTATUS_FAILED;
         }
-
         if (pInfo->wStatus == NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_D("hal_read_cb successful status = 0x%x", pInfo->wStatus);
+            if(pInfo->pBuff[0] == NXP_NCI_MT_RSP && ((pInfo->pBuff[1] & NXP_NCI_OID_MASK) == NXP_NCI_MSG_CORE_RESET))
+            {
+                if(pInfo->pBuff[2] == NCI20_CORE_RESET_RSP_LEN && pInfo->pBuff[3] == NCI_CORE_RESET_STATUS_OK)
+                {
+                    NXPLOG_NCIHAL_D("CORE_RESET_RSP NCI2.0");
+                    mSelfTestHdlr.wait_for_ntf = TRUE;
+                }
+                else if(pInfo->pBuff[2] == NCI10_CORE_RESET_RSP_LEN && pInfo->pBuff[3] == NCI_CORE_RESET_STATUS_OK)
+                {
+                    NXPLOG_NCIHAL_D("CORE_RESET_RSP NCI1.0");
+                    mSelfTestHdlr.wait_for_ntf = FALSE;
+                    mSelfTestHdlr.nci_version = pInfo->pBuff[4];
+                }
+            }
+            else if (pInfo->pBuff[0] == NXP_NCI_MT_NTF && ((pInfo->pBuff[1] & NXP_NCI_OID_MASK) == NXP_NCI_MSG_CORE_RESET))
+            {
+                mSelfTestHdlr.mTransInfo.wStatus = pInfo->wStatus;
+                mSelfTestHdlr.mTransInfo.wLength = pInfo->wLength;
+                memcpy(mSelfTestHdlr.mTransInfo.pBuff, pInfo->pBuff, pInfo->wLength);
+                mSelfTestHdlr.nci_version = pInfo->pBuff[5];
+                mSelfTestHdlr.wait_for_ntf = FALSE;
+            }
+            else if(pInfo->pBuff[0] == NXP_NCI_MT_RSP && ((pInfo->pBuff[1] & NXP_NCI_OID_MASK) == NXP_NCI_MSG_CORE_INIT))
+            {
+                mSelfTestHdlr.wait_for_ntf = FALSE;
+                if(mSelfTestHdlr.nci_version == NCI_VERSION_2_0)
+                {
+                    NXPLOG_NCIHAL_D("CORE_INIT_RSP NCI2.0 received !");
+                }
+                else
+                {
+                    mSelfTestHdlr.mTransInfo.wStatus = pInfo->wStatus;
+                    mSelfTestHdlr.mTransInfo.wLength = pInfo->wLength;
+                    memcpy(mSelfTestHdlr.mTransInfo.pBuff, pInfo->pBuff, pInfo->wLength);
+                    NXPLOG_NCIHAL_D("CORE_INIT_RSP NCI1.0 received !");
+                }
+            }
             p_cb_data->status = NFCSTATUS_SUCCESS;
         }
         else
@@ -1081,51 +915,48 @@ static void hal_read_cb(void *pContext, phTmlNfc_TransactInfo_t *pInfo)
             p_cb_data->status = NFCSTATUS_FAILED;
         }
 
-        p_cb_data->status = pInfo->wStatus;
-
         nci_test_data_t *test_data = (nci_test_data_t*) p_cb_data->pContext;
-
-        if(test_data->exp_rsp.len == 0)
+        if ((pInfo->pBuff[0] & NCI_MSG_TYPE_MASK) == NXP_NCI_MT_NTF)
         {
             /* Compare the actual notification with expected notification.*/
-            if( test_data->ntf_validator(&(test_data->exp_ntf),pInfo) == 1 )
+            if (test_data->ntf_validator(&(test_data->exp_ntf), pInfo) == 1)
             {
                 p_cb_data->status = NFCSTATUS_SUCCESS;
             }
             else
             {
                 p_cb_data->status = NFCSTATUS_FAILED;
-
             }
         }
 
         /* Compare the actual response with expected response.*/
-        else if( test_data->rsp_validator(&(test_data->exp_rsp),pInfo) == 1)
+        else if((pInfo->pBuff[0] & NCI_MSG_TYPE_MASK) == NXP_NCI_MT_RSP)
         {
-            p_cb_data->status = NFCSTATUS_SUCCESS;
+            if (test_data->rsp_validator(&(test_data->exp_rsp), pInfo) == 1)
+            {
+                p_cb_data->status = NFCSTATUS_SUCCESS;
+            }
+            else
+            {
+                p_cb_data->status = NFCSTATUS_FAILED;
+            }
         }
-        else
-        {
-            p_cb_data->status = NFCSTATUS_FAILED;
-        }
-        test_data->exp_rsp.len = 0;
     }
 
     SEM_POST(p_cb_data);
-
     return;
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_test_rx_thread
-**
-** Description      Thread to fetch and process messages from message queue.
-**
-** Returns          NULL
-**
-*******************************************************************************/
-static void *phNxpNciHal_test_rx_thread(void *arg)
+ **
+ ** Function         phNxpNciHal_test_rx_thread
+ **
+ ** Description      Thread to fetch and process messages from message queue.
+ **
+ ** Returns          NULL
+ **
+ *******************************************************************************/
+static void* phNxpNciHal_test_rx_thread(void* arg)
 {
     phLibNfc_Message_t msg;
     UNUSED(arg);
@@ -1136,58 +967,57 @@ static void *phNxpNciHal_test_rx_thread(void *arg)
     while (thread_running == 1)
     {
         /* Fetch next message from the NFC stack message queue */
-        if (phDal4Nfc_msgrcv(gDrvCfg.nClientId,
-                &msg, 0, 0) == -1)
+        if (phDal4Nfc_msgrcv(gDrvCfg.nClientId, &msg, 0, 0) == -1)
         {
             NXPLOG_NCIHAL_E("Received bad message");
             continue;
         }
 
-        if(thread_running == 0)
+        if (thread_running == 0)
         {
             break;
         }
-
         switch (msg.eMsgType)
         {
             case PH_LIBNFC_DEFERREDCALL_MSG:
             {
                 phLibNfc_DeferredCall_t *deferCall =
-                        (phLibNfc_DeferredCall_t *) (msg.pMsgData);
+                    (phLibNfc_DeferredCall_t *) (msg.pMsgData);
 
                 REENTRANCE_LOCK();
                 deferCall->pCallback(deferCall->pParameter);
                 REENTRANCE_UNLOCK();
-
                 break;
             }
+            default:
+                break;
         }
     }
 
     NXPLOG_NCIHAL_D("Self test thread stopped");
 
+    pthread_exit(NULL);
     return NULL;
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_readLocked
-**
-** Description      Reads response and notification from NFCC and waits for
-**                  read completion, for a definitive timeout value.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED,
-**                  NFCSTATUS_RESPONSE_TIMEOUT in case of timeout.
-**
-*******************************************************************************/
-static NFCSTATUS phNxpNciHal_readLocked(nci_test_data_t *pData )
+ **
+ ** Function         phNxpNciHal_readLocked
+ **
+ ** Description      Reads response and notification from NFCC and waits for
+ **                  read completion, for a definitive timeout value.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED,
+ **                  NFCSTATUS_RESPONSE_TIMEOUT in case of timeout.
+ **
+ *******************************************************************************/
+static NFCSTATUS phNxpNciHal_readLocked(nci_test_data_t* pData)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
     phNxpNciHal_Sem_t cb_data;
     uint16_t read_len = 16;
     /* RX Buffer */
     uint32_t rx_data[NCI_MAX_DATA_LEN];
-
     /* Create the local semaphore */
     if (phNxpNciHal_init_cb_data(&cb_data, pData) != NFCSTATUS_SUCCESS)
     {
@@ -1197,11 +1027,9 @@ static NFCSTATUS phNxpNciHal_readLocked(nci_test_data_t *pData )
     }
 
     /* call read pending */
-    status = phTmlNfc_Read(
-            (uint8_t *) rx_data,
-            (uint16_t) read_len,
-            (pphTmlNfc_TransactCompletionCb_t) &hal_read_cb,
-            &cb_data);
+    status =
+        phTmlNfc_Read((uint8_t*)rx_data, (uint16_t)read_len,
+                      (pphTmlNfc_TransactCompletionCb_t)&hal_read_cb, &cb_data);
 
     if (status != NFCSTATUS_PENDING)
     {
@@ -1210,10 +1038,8 @@ static NFCSTATUS phNxpNciHal_readLocked(nci_test_data_t *pData )
         goto clean_and_return;
     }
 
-    status = phOsalNfc_Timer_Start(timeoutTimerId,
-            HAL_WRITE_RSP_TIMEOUT,
-            &hal_write_rsp_timeout_cb,
-            &cb_data);
+    status = phOsalNfc_Timer_Start(timeoutTimerId, HAL_WRITE_RSP_TIMEOUT,
+                                   &hal_write_rsp_timeout_cb, &cb_data);
 
     if (NFCSTATUS_SUCCESS == status)
     {
@@ -1234,12 +1060,11 @@ static NFCSTATUS phNxpNciHal_readLocked(nci_test_data_t *pData )
         goto clean_and_return;
     }
 
-    if(cb_data.status == NFCSTATUS_RESPONSE_TIMEOUT)
+    if (cb_data.status == NFCSTATUS_RESPONSE_TIMEOUT)
     {
         NXPLOG_NCIHAL_E("Response timeout!!!");
         status = NFCSTATUS_RESPONSE_TIMEOUT;
         goto clean_and_return;
-
     }
 
     if (cb_data.status != NFCSTATUS_SUCCESS)
@@ -1249,30 +1074,28 @@ static NFCSTATUS phNxpNciHal_readLocked(nci_test_data_t *pData )
         goto clean_and_return;
     }
 
-    clean_and_return:
+clean_and_return:
     phNxpNciHal_cleanup_cb_data(&cb_data);
-
     return status;
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_writeLocked
-**
-** Description      Send command to NFCC and waits for cmd write completion, for
-**                  a definitive timeout value.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED,
-**                  NFCSTATUS_RESPONSE_TIMEOUT in case of timeout.
-**
-*******************************************************************************/
-static NFCSTATUS phNxpNciHal_writeLocked(nci_test_data_t *pData )
+ **
+ ** Function         phNxpNciHal_writeLocked
+ **
+ ** Description      Send command to NFCC and waits for cmd write completion, for
+ **                  a definitive timeout value.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED,
+ **                  NFCSTATUS_RESPONSE_TIMEOUT in case of timeout.
+ **
+ *******************************************************************************/
+static NFCSTATUS phNxpNciHal_writeLocked(nci_test_data_t* pData)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
 
     phNxpNciHal_Sem_t cb_data;
     int retryCnt = 0;
-
     /* Create the local semaphore */
     if (phNxpNciHal_init_cb_data(&cb_data, NULL) != NFCSTATUS_SUCCESS)
     {
@@ -1281,8 +1104,9 @@ static NFCSTATUS phNxpNciHal_writeLocked(nci_test_data_t *pData )
     }
 
 retry:
-    status = phTmlNfc_Write(pData->cmd.p_data, pData->cmd.len,
-            (pphTmlNfc_TransactCompletionCb_t) &hal_write_cb, &cb_data);
+    status =
+        phTmlNfc_Write(pData->cmd.p_data, pData->cmd.len,
+                       (pphTmlNfc_TransactCompletionCb_t) &hal_write_cb, &cb_data);
 
     if (status != NFCSTATUS_PENDING)
     {
@@ -1301,7 +1125,9 @@ retry:
     if (cb_data.status != NFCSTATUS_SUCCESS && retryCnt < HAL_WRITE_MAX_RETRY)
     {
         retryCnt++;
-        NXPLOG_NCIHAL_E("write_unlocked failed - PN54X Maybe in Standby Mode - Retry %d",retryCnt);
+        NXPLOG_NCIHAL_E(
+            "write_unlocked failed - PN54X Maybe in Standby Mode - Retry %d",
+            retryCnt);
         goto retry;
     }
 
@@ -1309,25 +1135,24 @@ retry:
 
 clean_and_return:
     phNxpNciHal_cleanup_cb_data(&cb_data);
-
     return status;
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_performTest
-**
-** Description      Performs a single cycle of command,response and
-**                  notification.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED,
-**
-*******************************************************************************/
-NFCSTATUS phNxpNciHal_performTest(nci_test_data_t *pData )
+ **
+ ** Function         phNxpNciHal_performTest
+ **
+ ** Description      Performs a single cycle of command,response and
+ **                  notification.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED,
+ **
+ *******************************************************************************/
+NFCSTATUS phNxpNciHal_performTest(nci_test_data_t* pData)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
 
-    if(NULL == pData)
+    if (NULL == pData)
     {
         return NFCSTATUS_FAILED;
     }
@@ -1336,27 +1161,27 @@ NFCSTATUS phNxpNciHal_performTest(nci_test_data_t *pData )
 
     status = phNxpNciHal_writeLocked(pData);
 
-    if(status == NFCSTATUS_RESPONSE_TIMEOUT)
+    if (status == NFCSTATUS_RESPONSE_TIMEOUT)
     {
         goto clean_and_return;
     }
-    if(status != NFCSTATUS_SUCCESS)
+    if (status != NFCSTATUS_SUCCESS)
     {
         goto clean_and_return;
     }
 
     status = phNxpNciHal_readLocked(pData);
 
-    if(status != NFCSTATUS_SUCCESS)
+    if (status != NFCSTATUS_SUCCESS)
     {
         goto clean_and_return;
     }
 
-    if(0 != pData->exp_ntf.len)
+    if (0 != pData->exp_ntf.len)
     {
         status = phNxpNciHal_readLocked(pData);
 
-        if(status != NFCSTATUS_SUCCESS)
+        if (status != NFCSTATUS_SUCCESS)
         {
             goto clean_and_return;
         }
@@ -1384,9 +1209,17 @@ NFCSTATUS phNxpNciHal_TestMode_open (void)
 
     phOsalNfc_Config_t tOsalConfig;
     phTmlNfc_Config_t tTmlConfig;
+    uint8_t* nfc_dev_node = NULL;
+    const uint16_t max_len = 260; /* device node name is max of 255 bytes + 5 bytes (/dev/) */
     NFCSTATUS status = NFCSTATUS_SUCCESS;
     uint16_t read_len = 255;
-
+    int8_t ret_val = 0x00;
+    mSelfTestHdlr.mTransInfo.pBuff  = (uint8_t *)malloc(max_len * sizeof(uint8_t));
+    if(mSelfTestHdlr.mTransInfo.pBuff == NULL)
+    {
+        NXPLOG_NCIHAL_E("Error ! memory not allocated.");
+        return NFCSTATUS_FAILED;
+    }
     /* initialize trace level */
     phNxpLog_InitializeLogLevel();
 
@@ -1401,9 +1234,25 @@ NFCSTATUS phNxpNciHal_TestMode_open (void)
     memset(&tOsalConfig, 0x00, sizeof(tOsalConfig));
     memset(&tTmlConfig, 0x00, sizeof(tTmlConfig));
 
+    /* Read the nfc device node name */
+    nfc_dev_node = (uint8_t*)malloc(max_len * sizeof(uint8_t));
+    if (nfc_dev_node == NULL)
+    {
+        NXPLOG_NCIHAL_E("malloc of nfc_dev_node failed ");
+        goto clean_and_return;
+    }
+    else if (!GetNxpStrValue(NAME_NXP_NFC_DEV_NODE, (char*)nfc_dev_node,
+                             max_len))
+    {
+        NXPLOG_NCIHAL_E(
+            "Invalid nfc device node name keeping the default device node "
+            "/dev/pn54x");
+        strcpy((char*)nfc_dev_node, "/dev/pn54x");
+    }
+
     gDrvCfg.nClientId = phDal4Nfc_msgget(0, 0600);
     gDrvCfg.nLinkType = ENUM_LINK_TYPE_I2C;/* For PN54X */
-    tTmlConfig.pDevName = (int8_t *) "/dev/pn544";
+    tTmlConfig.pDevName = (int8_t*)nfc_dev_node;
     tOsalConfig.dwCallbackThreadId = (uintptr_t) gDrvCfg.nClientId;
     tOsalConfig.pLogFile = NULL;
     tTmlConfig.dwGetMsgThreadId = (uintptr_t) gDrvCfg.nClientId;
@@ -1416,21 +1265,41 @@ NFCSTATUS phNxpNciHal_TestMode_open (void)
         NXPLOG_NCIHAL_E("phTmlNfc_Init Failed");
         goto clean_and_return;
     }
-
+    else
+    {
+        if (nfc_dev_node != NULL)
+        {
+            free(nfc_dev_node);
+            nfc_dev_node = NULL;
+        }
+    }
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    if (pthread_create(&test_rx_thread, &attr,
-            phNxpNciHal_test_rx_thread, NULL) != 0)
+    ret_val =
+        pthread_create(&test_rx_thread, &attr, phNxpNciHal_test_rx_thread, NULL);
+    pthread_attr_destroy(&attr);
+    if (ret_val != 0)
     {
         NXPLOG_NCIHAL_E("pthread_create failed");
         phTmlNfc_Shutdown();
         goto clean_and_return;
     }
 
+    if(pthread_setname_np(test_rx_thread,"HAL_TESTMODE_RX"))
+    {
+        NXPLOG_NCIHAL_E("pthread_setname_np failed");
+    }
+
     timeoutTimerId = phOsalNfc_Timer_Create();
 
-    if(timeoutTimerId == 0xFFFF)
+    if(phNxpNciHal_initialize_chipType() != NFCSTATUS_SUCCESS)
+    {
+        NXPLOG_NCIHAL_E("Chip initialization failed");
+        goto clean_and_return;
+    }
+
+    if (timeoutTimerId == 0xFFFF)
     {
         NXPLOG_NCIHAL_E("phOsalNfc_Timer_Create failed");
     }
@@ -1444,10 +1313,134 @@ NFCSTATUS phNxpNciHal_TestMode_open (void)
 
 clean_and_return:
     CONCURRENCY_UNLOCK();
+    if (nfc_dev_node != NULL)
+    {
+        free(nfc_dev_node);
+        nfc_dev_node = NULL;
+    }
     phNxpNciHal_cleanup_monitor();
     return NFCSTATUS_FAILED;
 }
 
+/*******************************************************************************
+ **
+ ** Function         phNxpNciHal_initialize_chipType
+ **
+ ** Description      This function Initializes the NFCC chip type and
+ **                  Feature list flags
+ **
+ ** Returns          None.
+ **
+ ******************************************************************************/
+NFCSTATUS phNxpNciHal_initialize_chipType()
+{
+    nci_test_data_t* pCoreResetCmd = &swp1_test_data[0];
+    nci_test_data_t* pCoreInitCmd = &swp1_test_data[1];
+    NFCSTATUS status = NFCSTATUS_SUCCESS;
+    NXPLOG_NCIHAL_D("phNxpNciHal_initialize_chipType() : entry");
+
+    //CORE RESET COMMAND
+    if(!phNxpNciHal_writeLocked(pCoreResetCmd))
+    {
+        if(phNxpNciHal_readLocked(pCoreResetCmd) != NFCSTATUS_SUCCESS)
+        {
+            NXPLOG_NCIHAL_D("Response not received for CORE RESET command");
+        }
+
+        if(mSelfTestHdlr.wait_for_ntf)
+        {
+            pCoreResetCmd->exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+            memcpy(pCoreResetCmd->exp_rsp.p_data, nfcc_core_reset_nci20_rsp,pCoreResetCmd->exp_rsp.len);
+            pCoreResetCmd->exp_ntf.len = (sizeof(nfcc_core_reset_nci20_ntf) / sizeof(nfcc_core_reset_nci20_ntf[0]));
+            memcpy(pCoreResetCmd->exp_ntf.p_data, nfcc_core_reset_nci20_ntf, pCoreResetCmd->exp_ntf.len);
+            if(phNxpNciHal_readLocked(pCoreResetCmd) != NFCSTATUS_SUCCESS)
+            {
+                NXPLOG_NCIHAL_D("NCI 2.0 Notification is not received");
+                status = NFCSTATUS_FAILED;
+            }
+            else
+            {
+            	phNxpNciHal_deriveChipType(mSelfTestHdlr.mTransInfo.pBuff,mSelfTestHdlr.mTransInfo.wLength);
+            }
+        }
+    }
+    else
+    {
+        NXPLOG_NCIHAL_E("CORE RESET Write failed");
+        return NFCSTATUS_FAILED;
+    }
+
+    //CORE INIT COMMAND
+    if(mSelfTestHdlr.nci_version == NCI_VERSION_2_0)
+    {
+        pCoreInitCmd->cmd.len = NFCC_CMD_NCI20_LEN;
+        memcpy(pCoreInitCmd->cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+        pCoreInitCmd->exp_rsp.len = sizeof(nfcc_core_init_nci20_rsp);
+        memcpy(pCoreInitCmd->exp_rsp.p_data, nfcc_core_init_nci20_rsp,pCoreInitCmd->exp_rsp.len);
+        status = phNxpNciHal_writeLocked(pCoreInitCmd);
+    }
+    else
+    {
+        pCoreInitCmd->cmd.len = NFCC_CMD_NCI10_LEN;
+        memcpy(pCoreInitCmd->cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+        status = phNxpNciHal_writeLocked(pCoreInitCmd);
+    }
+    if(!status)
+    {
+        if(phNxpNciHal_readLocked(pCoreInitCmd)  != NFCSTATUS_SUCCESS)
+        {
+            NXPLOG_NCIHAL_D("Response not received for CORE INIT command");
+            status = NFCSTATUS_FAILED;
+        }
+        else
+        {
+            if(mSelfTestHdlr.nci_version != NCI_VERSION_2_0)
+            {
+            	phNxpNciHal_deriveChipType(mSelfTestHdlr.mTransInfo.pBuff,mSelfTestHdlr.mTransInfo.wLength);
+            }
+        }
+    }
+    else
+        status = NFCSTATUS_FAILED;
+    if(!status && (phNxpNciHal_getChipType() == pn557) && (mSelfTestHdlr.nci_version != NCI_VERSION_2_0))
+    {
+        NXPLOG_NCIHAL_E("Chip is in NCI1.0 mode reset the chip to 2.0 mode");
+        if(!phNxpNciHal_writeLocked(pCoreResetCmd))
+        {
+            if(phNxpNciHal_readLocked(pCoreResetCmd) != NFCSTATUS_SUCCESS)
+            {
+                NXPLOG_NCIHAL_D("Response not received for CORE RESET command");
+                status = NFCSTATUS_FAILED;
+            }
+            if(mSelfTestHdlr.wait_for_ntf)
+            {
+                if(phNxpNciHal_readLocked(pCoreResetCmd) != NFCSTATUS_SUCCESS)
+                {
+                    NXPLOG_NCIHAL_D("NCI 2.0 Notification is not received");
+                    status = NFCSTATUS_FAILED;
+                }
+            }
+        }
+        else
+            status = NFCSTATUS_FAILED;
+        pCoreInitCmd->cmd.len = NFCC_CMD_NCI20_LEN;
+        memcpy(pCoreInitCmd->cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+        pCoreInitCmd->exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+        memcpy(pCoreInitCmd->exp_rsp.p_data, nfcc_core_reset_nci20_rsp,pCoreInitCmd->exp_rsp.len);
+        if(!phNxpNciHal_writeLocked(pCoreInitCmd))
+        {
+            if(phNxpNciHal_readLocked(pCoreInitCmd) != NFCSTATUS_SUCCESS)
+            {
+                NXPLOG_NCIHAL_D("Response not received for CORE RESET command");
+                status = NFCSTATUS_FAILED;
+            }
+        }
+        else
+            status = NFCSTATUS_FAILED;
+    }
+    NXPLOG_NCIHAL_D("phNxpNciHal_initialize_chipType() : exit chipType = 0x%02X",phNxpNciHal_getChipType());
+    return status;
+}
 /*******************************************************************************
  **
  ** Function         phNxpNciHal_TestMode_close
@@ -1485,6 +1478,8 @@ void phNxpNciHal_TestMode_close ()
         status = phOsalNfc_Timer_Delete(timeoutTimerId);
     }
 
+    free(mSelfTestHdlr.mTransInfo.pBuff);
+    mSelfTestHdlr.mTransInfo.pBuff = NULL;
     CONCURRENCY_UNLOCK();
 
     phNxpNciHal_cleanup_monitor();
@@ -1512,31 +1507,62 @@ NFCSTATUS phNxpNciHal_SwpTest(uint8_t swp_line)
 
     NXPLOG_NCIHAL_D("phNxpNciHal_SwpTest - start\n");
 
-    if(swp_line == 0x01)
+    if (swp_line == 0x01)
     {
+        swp1_test_data[0].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+        swp1_test_data[1].exp_rsp.p_data[2] = NFCC_EXP_RES_DATA_BYTE2;
+        if(phNxpNciHal_getChipType() == pn557)
+        {
+            swp1_test_data[0].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+            memcpy(swp1_test_data[0].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,swp1_test_data[0].exp_rsp.len);
+            swp1_test_data[0].exp_ntf.len = (sizeof(nfcc_core_reset_nci20_ntf) / sizeof(nfcc_core_reset_nci20_ntf[0]));
+            memcpy(swp1_test_data[0].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, swp1_test_data[0].exp_ntf.len);
+            swp1_test_data[1].cmd.len = NFCC_CMD_NCI20_LEN;
+            memcpy(swp1_test_data[1].cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+            swp1_test_data[1].exp_rsp.len = sizeof(nfcc_core_init_nci20_rsp);
+            memcpy(swp1_test_data[1].exp_rsp.p_data, nfcc_core_init_nci20_rsp, swp1_test_data[1].exp_rsp.len);
+        }
+        else
+        {
+            swp1_test_data[1].cmd.len = NFCC_CMD_NCI10_LEN;
+            memcpy(swp1_test_data[1].cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+        }
         len = (sizeof(swp1_test_data)/sizeof(swp1_test_data[0]));
-
-        for(cnt = 0; cnt < len; cnt++)
+        for (cnt = 0; cnt < len; cnt++)
         {
             status = phNxpNciHal_performTest(&(swp1_test_data[cnt]));
-            if(status == NFCSTATUS_RESPONSE_TIMEOUT ||
-                    status == NFCSTATUS_FAILED
-            )
+            if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
             {
                 break;
             }
         }
     }
-    else if(swp_line == 0x02)
+    else if (swp_line == 0x02)
     {
+        swp2_test_data[0].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+        swp2_test_data[1].exp_rsp.p_data[2] = NFCC_EXP_RES_DATA_BYTE2;
+        if(phNxpNciHal_getChipType() == pn557)
+        {
+            swp2_test_data[0].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+            memcpy(swp2_test_data[0].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,swp2_test_data[0].exp_rsp.len);
+            swp2_test_data[0].exp_ntf.len = (sizeof(nfcc_core_reset_nci20_ntf) / sizeof(nfcc_core_reset_nci20_ntf[0]));
+            memcpy(swp2_test_data[0].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, swp2_test_data[0].exp_ntf.len);
+            swp2_test_data[1].cmd.len = NFCC_CMD_NCI20_LEN;
+            memcpy(swp2_test_data[1].cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+            swp2_test_data[1].exp_rsp.len = sizeof(nfcc_core_init_nci20_rsp);
+            memcpy(swp2_test_data[1].exp_rsp.p_data, nfcc_core_init_nci20_rsp, swp2_test_data[1].exp_rsp.len);
+        }
+        else
+        {
+            swp2_test_data[1].cmd.len = NFCC_CMD_NCI10_LEN;
+            memcpy(swp2_test_data[1].cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+        }
         len = (sizeof(swp2_test_data)/sizeof(swp2_test_data[0]));
 
-        for(cnt = 0; cnt < len; cnt++)
+        for (cnt = 0; cnt < len; cnt++)
         {
             status = phNxpNciHal_performTest(&(swp2_test_data[cnt]));
-            if(status == NFCSTATUS_RESPONSE_TIMEOUT ||
-                    status == NFCSTATUS_FAILED
-            )
+            if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
             {
                 break;
             }
@@ -1547,7 +1573,7 @@ NFCSTATUS phNxpNciHal_SwpTest(uint8_t swp_line)
         status = NFCSTATUS_FAILED;
     }
 
-    if( status == NFCSTATUS_SUCCESS)
+    if (status == NFCSTATUS_SUCCESS)
     {
         NXPLOG_NCIHAL_D("phNxpNciHal_SwpTest - SUCCESSS\n");
     }
@@ -1574,24 +1600,25 @@ NFCSTATUS phNxpNciHal_SwpTest(uint8_t swp_line)
  **
  *******************************************************************************/
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-NFCSTATUS phNxpNciHal_PrbsTestStart (phNxpNfc_PrbsType_t prbs_type, phNxpNfc_PrbsHwType_t hw_prbs_type,
-        phNxpNfc_Tech_t tech, phNxpNfc_Bitrate_t bitrate)
-#else
-NFCSTATUS phNxpNciHal_PrbsTestStart (phNxpNfc_Tech_t tech, phNxpNfc_Bitrate_t bitrate)
-#endif
+NFCSTATUS phNxpNciHal_PrbsTestStart(phNxpNfc_PrbsType_t prbs_type,
+                                    phNxpNfc_PrbsHwType_t hw_prbs_type,
+                                    phNxpNfc_Tech_t tech,
+                                    phNxpNfc_Bitrate_t bitrate)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
 
+    uint8_t rsp_cmd_info[] = {0x4F, 0x30, 0x01, 0x00};
+
     nci_test_data_t prbs_cmd_data;
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    uint8_t rsp_cmd_info[] = {0x4F, 0x30, 0x01, 0x00};
-    prbs_cmd_data.cmd.len = 0x09;
-#else
-    uint8_t rsp_cmd_info[] = {0x4F, 0x30, 0x01, 0x00};
-    prbs_cmd_data.cmd.len = 0x07;
-#endif
+    if (phNxpNciHal_getChipType() != pn547C2)
+    {
+        prbs_cmd_data.cmd.len = 0x09;
+    }
+    else
+    {
+        prbs_cmd_data.cmd.len = 0x07;
+    }
 
     memcpy(prbs_cmd_data.exp_rsp.p_data, &rsp_cmd_info[0], sizeof(rsp_cmd_info));
     prbs_cmd_data.exp_rsp.len = sizeof(rsp_cmd_info);
@@ -1604,14 +1631,10 @@ NFCSTATUS phNxpNciHal_PrbsTestStart (phNxpNfc_Tech_t tech, phNxpNfc_Bitrate_t bi
     uint8_t len = 0;
     uint8_t cnt = 0;
 
-//    [NCI] -> [0x2F 0x30 0x04 0x00 0x00 0x01 0xFF]
+    //    [NCI] -> [0x2F 0x30 0x04 0x00 0x00 0x01 0xFF]
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
     status = phNxpNciHal_getPrbsCmd(prbs_type, hw_prbs_type, tech, bitrate,
-            prbs_cmd_data.cmd.p_data,prbs_cmd_data.cmd.len);
-#else
-    status = phNxpNciHal_getPrbsCmd(tech, bitrate,prbs_cmd_data.cmd.p_data,prbs_cmd_data.cmd.len);
-#endif
+                                    prbs_cmd_data.cmd.p_data,prbs_cmd_data.cmd.len);
 
     if( status == NFCSTATUS_FAILED)
     {
@@ -1620,23 +1643,55 @@ NFCSTATUS phNxpNciHal_PrbsTestStart (phNxpNfc_Tech_t tech, phNxpNfc_Bitrate_t bi
 
         goto clean_and_return;
     }
+    prbs_test_data[len].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+    if(phNxpNciHal_getChipType() == pn557)
+    {
+        prbs_test_data[len].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+        memcpy(prbs_test_data[len].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,prbs_test_data[len].exp_rsp.len);
+        prbs_test_data[len].exp_ntf.len = (sizeof(nfcc_core_reset_nci20_ntf) / sizeof(nfcc_core_reset_nci20_ntf[len]));
+        memcpy(prbs_test_data[len].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, prbs_test_data[len].exp_ntf.len);
+    }
+    len++;//val 1
+    prbs_test_data[len].exp_rsp.p_data[2] = NFCC_EXP_RES_DATA_BYTE2;
+    if(phNxpNciHal_getChipType() == pn557)
+    {
+        prbs_test_data[len].cmd.len = NFCC_CMD_NCI20_LEN;
+        memcpy(prbs_test_data[len].cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+        prbs_test_data[len].exp_rsp.len = sizeof(nfcc_core_init_nci20_rsp);
+        memcpy(prbs_test_data[len].exp_rsp.p_data, nfcc_core_init_nci20_rsp, prbs_test_data[len].exp_rsp.len);
+    }
+    else
+    {
+        prbs_test_data[len].cmd.len = NFCC_CMD_NCI10_LEN;
+        memcpy(prbs_test_data[len].cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+    }
+    len++;//val 2
+    if(phNxpNciHal_getChipType() == pn547C2)
+    {
+        prbs_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd);
+        memcpy(prbs_test_data[len].cmd.p_data, nfcc_power_mgt_cmd, prbs_test_data[len].cmd.len);
+        prbs_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+        memcpy(prbs_test_data[2].exp_rsp.p_data, nfcc_power_mgt_rsp, prbs_test_data[len].cmd.len);
+        prbs_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+        prbs_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+        prbs_test_data[len].rsp_validator = st_validator_testEquals;
+        prbs_test_data[len].ntf_validator = st_validator_null;
+        len++;//val 3
+    }
 
-    len = (sizeof(prbs_test_data)/sizeof(prbs_test_data[0]));
-
-    for(cnt = 0; cnt < len; cnt++)
+    for (cnt = 0; cnt < len; cnt++)
     {
         status = phNxpNciHal_performTest(&(prbs_test_data[cnt]));
-        if(status == NFCSTATUS_RESPONSE_TIMEOUT ||
-                status == NFCSTATUS_FAILED
-        )
+        if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
         {
             break;
         }
     }
 
-    /* Ignoring status, as there will be no response - Applicable till FW version 8.1.1*/
+    /* Ignoring status, as there will be no response - Applicable till FW version
+     * 8.1.1*/
     status = phNxpNciHal_performTest(&prbs_cmd_data);
-    clean_and_return:
+clean_and_return:
 
     if( status == NFCSTATUS_SUCCESS)
     {
@@ -1687,62 +1742,60 @@ NFCSTATUS phNxpNciHal_PrbsTestStop ()
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_getPrbsCmd
-**
-** Description      Test function frames the PRBS command.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
-**
-*******************************************************************************/
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-NFCSTATUS phNxpNciHal_getPrbsCmd (phNxpNfc_PrbsType_t prbs_type, phNxpNfc_PrbsHwType_t hw_prbs_type,
-        uint8_t tech, uint8_t bitrate, uint8_t *prbs_cmd, uint8_t prbs_cmd_len)
-#else
-NFCSTATUS phNxpNciHal_getPrbsCmd (uint8_t tech, uint8_t bitrate, uint8_t *prbs_cmd, uint8_t prbs_cmd_len)
-#endif
+ **
+ ** Function         phNxpNciHal_getPrbsCmd
+ **
+ ** Description      Test function frames the PRBS command.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
+ **
+ *******************************************************************************/
+NFCSTATUS phNxpNciHal_getPrbsCmd(phNxpNfc_PrbsType_t prbs_type,
+                                 phNxpNfc_PrbsHwType_t hw_prbs_type,
+                                 uint8_t tech, uint8_t bitrate,
+                                 uint8_t* prbs_cmd, uint8_t prbs_cmd_len)
+
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
     int position_tech_param = 0;
     int position_bit_param = 0;
+    int prbs_cmd_size = 0;
+    unsigned int prbs_index=0;
 
     NXPLOG_NCIHAL_D("phNxpNciHal_getPrbsCmd - tech 0x%x bitrate = 0x%x", tech, bitrate);
-    if(NULL == prbs_cmd ||
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-            prbs_cmd_len != 0x09)
-#else
-            prbs_cmd_len != 0x07)
-#endif
+
+    if (phNxpNciHal_getChipType() != pn547C2)
+    {
+        prbs_cmd_size = 0x09;
+    }
+    else
+    {
+        prbs_cmd_size = 0x07;
+    }
+
+    if(NULL == prbs_cmd || (prbs_cmd_len != prbs_cmd_size))
     {
         return status;
     }
 
-    prbs_cmd[0] = 0x2F;
-    prbs_cmd[1] = 0x30;
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    prbs_cmd[2] = 0x06;
-    prbs_cmd[3] = (uint8_t)prbs_type;
-    //0xFF Error value used for validation.
-    prbs_cmd[4] = (uint8_t)hw_prbs_type;
-    prbs_cmd[5] = 0xFF;//TECH
-    prbs_cmd[6] = 0xFF;//BITRATE
-    prbs_cmd[7] = 0x01;
-    prbs_cmd[8] = 0xFF;
-    position_tech_param = 5;
-    position_bit_param = 6;
-#else
-    prbs_cmd[2] = 0x04;
-    //0xFF Error value used for validation.
-    prbs_cmd[3] = 0xFF;//TECH
-    //0xFF Error value used for validation.
-    prbs_cmd[4] = 0xFF;//BITRATE
-    prbs_cmd[5] = 0x01;
-    prbs_cmd[6] = 0xFF;
-    position_tech_param = 3;
-    position_bit_param = 4;
-#endif
+    prbs_cmd[prbs_index++] = 0x2F;
+    prbs_cmd[prbs_index++] = 0x30;
+    prbs_cmd[prbs_index++] = prbs_cmd_size - 3;
+    if (phNxpNciHal_getChipType() != pn547C2)
+    {
+        prbs_cmd[prbs_index++] = (uint8_t)prbs_type;
+        //0xFF Error value used for validation.
+        prbs_cmd[prbs_index++] = (uint8_t)hw_prbs_type;
+    }
+    position_tech_param = prbs_index;
+    prbs_cmd[prbs_index++] = 0xFF;//TECH
+    position_bit_param = prbs_index;
+    prbs_cmd[prbs_index++] = 0xFF;//BITRATE
+    prbs_cmd[prbs_index++] = 0x01;
+    prbs_cmd[prbs_index++] = 0xFF;
 
-    switch (tech) {
+    switch (tech)
+    {
         case NFC_RF_TECHNOLOGY_A:
             NXPLOG_NCIHAL_D("phNxpNciHal_getPrbsCmd - NFC_RF_TECHNOLOGY_A");
             prbs_cmd[position_tech_param] = 0x00;
@@ -1797,43 +1850,194 @@ NFCSTATUS phNxpNciHal_getPrbsCmd (uint8_t tech, uint8_t bitrate, uint8_t *prbs_c
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_RfFieldTest
-**
-** Description      Test function performs RF filed test.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
-**
-*******************************************************************************/
+ **
+ ** Function         phNxpNciHal_RfFieldTest
+ **
+ ** Description      Test function performs RF filed test.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
+ **
+ *******************************************************************************/
 NFCSTATUS phNxpNciHal_RfFieldTest (uint8_t on)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
     int len = 0;
     int cnt = 0;
-
+    uint8_t nfcc_act_cmd[] = SYSTEM_PROPRIETARY_ACT_CMD;
+    uint8_t nfcc_act_exp_rsp[] = SYSTEM_PROPRIETARY_ACT_RSP;
+    uint8_t nfcc_antena_cmd1[] = SYSTEM_TEST_ANTENNA_CMD_1;
+    uint8_t nfcc_antena_cmd2[] = SYSTEM_TEST_ANTENNA_CMD_2;
+    uint8_t nfcc_antena_rsp1[] = SYSTEM_TEST_ANTENNA_RSP_1;
+    uint8_t nfcc_power_mgt_cmd_1[] = SYSTEM_SET_POWERMGT_CMD_1;
+    uint8_t nfcc_antena_cmd3[] = SYSTEM_TEST_ANTENNA_CMD_3;
+    uint8_t nfcc_antena_cmd4[] = SYSTEM_TEST_ANTENNA_CMD_4;
     NXPLOG_NCIHAL_D("phNxpNciHal_RfFieldTest - start %x\n",on);
 
-    if(on == 0x01)
+    if (on == 0x01)
     {
-        len = (sizeof(rf_field_on_test_data)/sizeof(rf_field_on_test_data[0]));
+        rf_field_on_test_data[len].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+        if(phNxpNciHal_getChipType() == pn557)
+        {
+            rf_field_on_test_data[len].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+            memcpy(rf_field_on_test_data[len].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,rf_field_on_test_data[len].exp_rsp.len);
+            rf_field_on_test_data[len].exp_ntf.len = sizeof(nfcc_core_reset_nci20_ntf);
+            memcpy(rf_field_on_test_data[len].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, rf_field_on_test_data[len].exp_ntf.len);
+        }
+        len++;// len val 1
+        rf_field_on_test_data[len].exp_rsp.p_data[2] = NFCC_EXP_RES_DATA_BYTE2;
+        if(phNxpNciHal_getChipType() == pn557)
+        {
+            rf_field_on_test_data[len].cmd.len = NFCC_CMD_NCI20_LEN;
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+            rf_field_on_test_data[len].exp_rsp.len = sizeof(nfcc_core_init_nci20_rsp);
+            memcpy(rf_field_on_test_data[len].exp_rsp.p_data, nfcc_core_init_nci20_rsp, rf_field_on_test_data[len].exp_rsp.len);
+        }
+        else
+        {
+            rf_field_on_test_data[len].cmd.len = NFCC_CMD_NCI10_LEN;
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+        }
+        len++; //len val 2
+        if(phNxpNciHal_getChipType() != pn547C2)
+        {
+            rf_field_on_test_data[len].cmd.len = sizeof(nfcc_act_cmd);
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_act_cmd, rf_field_on_test_data[len].cmd.len);
+            rf_field_on_test_data[len].exp_rsp.len = sizeof(nfcc_act_exp_rsp);
+            memcpy(rf_field_on_test_data[len].exp_rsp.p_data, nfcc_act_exp_rsp, rf_field_on_test_data[len].cmd.len);
+            rf_field_on_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+            rf_field_on_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+            rf_field_on_test_data[len].rsp_validator = st_validator_testEquals;
+            rf_field_on_test_data[len].ntf_validator = st_validator_null;
+            len++; //len val 3
 
-        for(cnt = 0; cnt < len; cnt++)
+            rf_field_on_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd);
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_power_mgt_cmd, rf_field_on_test_data[len].cmd.len);
+            rf_field_on_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+            memcpy(rf_field_on_test_data[len].exp_rsp.p_data, nfcc_power_mgt_rsp, rf_field_on_test_data[len].cmd.len);
+            rf_field_on_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+            rf_field_on_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+            rf_field_on_test_data[len].rsp_validator = st_validator_testEquals;
+            rf_field_on_test_data[len].ntf_validator = st_validator_null;
+            len++; //len val 4
+        }
+        if(phNxpNciHal_getChipType() != pn547C2)
+        {
+            rf_field_on_test_data[len].cmd.len = sizeof(nfcc_antena_cmd2);
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_antena_cmd2, rf_field_on_test_data[len].cmd.len);
+        }
+        else
+        {
+            rf_field_on_test_data[len].cmd.len = sizeof(nfcc_antena_cmd1);
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_antena_cmd1, rf_field_on_test_data[len].cmd.len);
+        }
+        rf_field_on_test_data[len].exp_rsp.len = sizeof(nfcc_antena_rsp1);
+        memcpy(rf_field_on_test_data[len].exp_rsp.p_data, nfcc_antena_rsp1, rf_field_on_test_data[len].cmd.len);
+        rf_field_on_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+        rf_field_on_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+        rf_field_on_test_data[len].rsp_validator = st_validator_testEquals;
+        rf_field_on_test_data[len].ntf_validator = st_validator_null;
+        len++; //len val 5
+        if(phNxpNciHal_getChipType() != pn547C2)
+        {
+            rf_field_on_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd_1);
+            memcpy(rf_field_on_test_data[len].cmd.p_data, nfcc_power_mgt_cmd_1, rf_field_on_test_data[len].cmd.len);
+            rf_field_on_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+            memcpy(rf_field_on_test_data[len].exp_rsp.p_data, nfcc_power_mgt_rsp, rf_field_on_test_data[len].cmd.len);
+            rf_field_on_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+            rf_field_on_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+            rf_field_on_test_data[len].rsp_validator = st_validator_testEquals;
+            rf_field_on_test_data[len].ntf_validator = st_validator_null;
+            len++; //len val 6
+        }
+
+        for (cnt = 0; cnt < len; cnt++)
         {
             status = phNxpNciHal_performTest(&(rf_field_on_test_data[cnt]));
-            if(status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
+            if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
             {
                 break;
             }
         }
     }
-    else if(on == 0x00)
+    else if (on == 0x00)
     {
-        len = (sizeof(rf_field_off_test_data)/sizeof(rf_field_off_test_data[0]));
+        rf_field_off_test_data[len].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+        if(phNxpNciHal_getChipType() == pn557)
+        {
+            rf_field_off_test_data[len].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+            memcpy(rf_field_off_test_data[len].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,rf_field_off_test_data[len].exp_rsp.len);
+            rf_field_off_test_data[len].exp_ntf.len = sizeof(nfcc_core_reset_nci20_ntf);
+            memcpy(rf_field_off_test_data[len].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, rf_field_off_test_data[len].exp_ntf.len);
+        }
+        len++;//len val 1
+        rf_field_off_test_data[len].exp_rsp.p_data[2] = NFCC_EXP_RES_DATA_BYTE2;
+        if(phNxpNciHal_getChipType() == pn557)
+        {
+            rf_field_off_test_data[len].cmd.len = NFCC_CMD_NCI20_LEN;
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+        }
+        else
+        {
+            rf_field_off_test_data[len].cmd.len = NFCC_CMD_NCI10_LEN;
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+        }
+        len++;//len val 2
+        if(phNxpNciHal_getChipType() != pn547C2)
+        {
+            rf_field_off_test_data[len].cmd.len = sizeof(nfcc_act_cmd);
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_act_cmd, rf_field_off_test_data[len].cmd.len);
+            rf_field_off_test_data[len].exp_rsp.len = sizeof(nfcc_act_exp_rsp);
+            memcpy(rf_field_off_test_data[len].exp_rsp.p_data, nfcc_act_exp_rsp, rf_field_off_test_data[len].cmd.len);
+            rf_field_off_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+            rf_field_off_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+            rf_field_off_test_data[len].rsp_validator = st_validator_testEquals;
+            rf_field_off_test_data[len].ntf_validator = st_validator_null;
+            len++; //len val 3
 
-        for(cnt = 0; cnt < len; cnt++)
+            rf_field_off_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd);
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_power_mgt_cmd, rf_field_off_test_data[len].cmd.len);
+            rf_field_off_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+            memcpy(rf_field_off_test_data[len].exp_rsp.p_data, nfcc_power_mgt_rsp, rf_field_off_test_data[len].cmd.len);
+            rf_field_off_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+            rf_field_off_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+            rf_field_off_test_data[len].rsp_validator = st_validator_testEquals;
+            rf_field_off_test_data[len].ntf_validator = st_validator_null;
+            len++; //len val 4
+        }
+        if(phNxpNciHal_getChipType() != pn547C2)
+        {
+            rf_field_off_test_data[len].cmd.len = sizeof(nfcc_antena_cmd3);
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_antena_cmd3, rf_field_off_test_data[len].cmd.len);
+        }
+        else
+        {
+            rf_field_off_test_data[len].cmd.len = sizeof(nfcc_antena_cmd4);
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_antena_cmd4, rf_field_off_test_data[len].cmd.len);
+        }
+        rf_field_off_test_data[len].exp_rsp.len = sizeof(nfcc_antena_rsp1);
+        memcpy(rf_field_off_test_data[len].exp_rsp.p_data, nfcc_antena_rsp1, rf_field_off_test_data[len].cmd.len);
+        rf_field_off_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+        rf_field_off_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+        rf_field_off_test_data[len].rsp_validator = st_validator_testEquals;
+        rf_field_off_test_data[len].ntf_validator = st_validator_null;
+        len++; //len val 5
+        if(phNxpNciHal_getChipType() != pn547C2)
+        {
+            rf_field_off_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd);
+            memcpy(rf_field_off_test_data[len].cmd.p_data, nfcc_power_mgt_cmd, rf_field_off_test_data[len].cmd.len);
+            rf_field_off_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+            memcpy(rf_field_off_test_data[len].exp_rsp.p_data, nfcc_power_mgt_rsp, rf_field_off_test_data[len].cmd.len);
+            rf_field_off_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+            rf_field_off_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+            rf_field_off_test_data[len].rsp_validator = st_validator_testEquals;
+            rf_field_off_test_data[len].ntf_validator = st_validator_null;
+            len++; //len val 6
+        }
+
+        for (cnt = 0; cnt < len; cnt++)
         {
             status = phNxpNciHal_performTest(&(rf_field_off_test_data[cnt]));
-            if(status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
+            if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
             {
                 break;
             }
@@ -1844,7 +2048,7 @@ NFCSTATUS phNxpNciHal_RfFieldTest (uint8_t on)
         status = NFCSTATUS_FAILED;
     }
 
-    if( status == NFCSTATUS_SUCCESS)
+    if (status == NFCSTATUS_SUCCESS)
     {
         NXPLOG_NCIHAL_D("phNxpNciHal_RfFieldTest - SUCCESSS\n");
     }
@@ -1866,8 +2070,8 @@ NFCSTATUS phNxpNciHal_RfFieldTest (uint8_t on)
  **
  ** Returns
  **
- *******************************************************************************/
-NFCSTATUS phNxpNciHal_AntennaTest ()
+ ******************************************************************************/
+NFCSTATUS phNxpNciHal_AntennaTest()
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
 
@@ -1875,14 +2079,14 @@ NFCSTATUS phNxpNciHal_AntennaTest ()
 }
 
 /*******************************************************************************
-**
-** Function         phNxpNciHal_DownloadPinTest
-**
-** Description      Test function to validate the FW download pin connection.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
-**
-*******************************************************************************/
+ **
+ ** Function         phNxpNciHal_DownloadPinTest
+ **
+ ** Description      Test function to validate the FW download pin connection.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
+ **
+ *******************************************************************************/
 NFCSTATUS phNxpNciHal_DownloadPinTest(void)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
@@ -1891,12 +2095,20 @@ NFCSTATUS phNxpNciHal_DownloadPinTest(void)
 
     NXPLOG_NCIHAL_D("phNxpNciHal_DownloadPinTest - start\n");
 
+    download_pin_test_data1[0].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+    if(phNxpNciHal_getChipType() == pn557)
+    {
+        download_pin_test_data1[0].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+        memcpy(download_pin_test_data1[0].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,download_pin_test_data1[0].exp_rsp.len);
+        download_pin_test_data1[0].exp_ntf.len = sizeof(nfcc_core_reset_nci20_ntf);
+        memcpy(download_pin_test_data1[0].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, download_pin_test_data1[0].exp_ntf.len);
+    }
     len = (sizeof(download_pin_test_data1)/sizeof(download_pin_test_data1[0]));
 
-    for(cnt = 0; cnt < len; cnt++)
+    for (cnt = 0; cnt < len; cnt++)
     {
         status = phNxpNciHal_performTest(&(download_pin_test_data1[cnt]));
-        if(status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
+        if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
         {
             break;
         }
@@ -1919,16 +2131,16 @@ NFCSTATUS phNxpNciHal_DownloadPinTest(void)
     status = NFCSTATUS_FAILED;
     len = (sizeof(download_pin_test_data2)/sizeof(download_pin_test_data2[0]));
 
-     for(cnt = 0; cnt < len; cnt++)
-     {
-         status = phNxpNciHal_performTest(&(download_pin_test_data2[cnt]));
-         if(status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
-         {
-             break;
-         }
-     }
+    for (cnt = 0; cnt < len; cnt++)
+    {
+        status = phNxpNciHal_performTest(&(download_pin_test_data2[cnt]));
+        if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
+        {
+            break;
+        }
+    }
 
-    if( status == NFCSTATUS_SUCCESS)
+    if (status == NFCSTATUS_SUCCESS)
     {
         NXPLOG_NCIHAL_D("phNxpNciHal_DownloadPinTest - SUCCESSS\n");
     }
@@ -1942,52 +2154,163 @@ NFCSTATUS phNxpNciHal_DownloadPinTest(void)
     return status;
 }
 /*******************************************************************************
-**
-** Function         phNxpNciHal_AntennaSelfTest
-**
-** Description      Test function to validate the Antenna's discrete
-**                  components connection.
-**
-** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
-**
-*******************************************************************************/
-NFCSTATUS phNxpNciHal_AntennaSelfTest(phAntenna_St_Resp_t * phAntenna_St_Resp )
+ **
+ ** Function         phNxpNciHal_AntennaSelfTest
+ **
+ ** Description      Test function to validate the Antenna's discrete
+ **                  components connection.
+ **
+ ** Returns          NFCSTATUS_SUCCESS if successful,otherwise NFCSTATUS_FAILED.
+ **
+ *******************************************************************************/
+NFCSTATUS phNxpNciHal_AntennaSelfTest(phAntenna_St_Resp_t* phAntenna_St_Resp)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
     NFCSTATUS antenna_st_status = NFCSTATUS_FAILED;
     int len = 0;
     int cnt = 0;
+    uint8_t nfcc_antena_cmd5[] = SYSTEM_TEST_ANTENNA_CMD_5;
+    uint8_t nfcc_antena_rsp2[] = SYSTEM_TEST_ANTENNA_RSP_2;
+    uint8_t nfcc_antena_cmd6[] = SYSTEM_TEST_ANTENNA_CMD_6; /* AGC with NFCLD measurement cmd */
+    uint8_t nfcc_antena_cmd7[] = SYSTEM_TEST_ANTENNA_CMD_7;
+    uint8_t nfcc_antena_cmd8[] = SYSTEM_TEST_ANTENNA_CMD_8;
+    uint8_t nfcc_antena_cmd9[] = SYSTEM_TEST_ANTENNA_CMD_9;
+    uint8_t nfcc_power_mgt_cmd_1[] = SYSTEM_SET_POWERMGT_CMD_1;
 
     NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - start\n");
     memcpy(&phAntenna_resp, phAntenna_St_Resp, sizeof(phAntenna_St_Resp_t));
-    len = (sizeof(antenna_self_test_data)/sizeof(antenna_self_test_data[0]));
+    antenna_self_test_data[len].exp_rsp.p_data[4] = NXP_NFCC_RESET_RSP_LEN;
+    if(phNxpNciHal_getChipType() == pn557)
+    {
+        antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_core_reset_nci20_rsp);
+        memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_core_reset_nci20_rsp,antenna_self_test_data[len].exp_rsp.len);
+        antenna_self_test_data[len].exp_ntf.len = sizeof(nfcc_core_reset_nci20_ntf);
+        memcpy(antenna_self_test_data[len].exp_ntf.p_data, nfcc_core_reset_nci20_ntf, antenna_self_test_data[len].exp_ntf.len);
+    }
+    len++;//len val 1
+    antenna_self_test_data[len].exp_rsp.p_data[2] = NFCC_EXP_RES_DATA_BYTE2;
+    if(phNxpNciHal_getChipType() == pn557)
+    {
+        antenna_self_test_data[len].cmd.len = NFCC_CMD_NCI20_LEN;
+        memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_core_init_nci20_cmd, NFCC_CMD_NCI20_LEN);
+    }
+    else
+    {
+        antenna_self_test_data[len].cmd.len = NFCC_CMD_NCI10_LEN;
+        memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_core_init_nci10_cmd, NFCC_CMD_NCI10_LEN);
+    }
+    len+=2;//len val 3, By default, structure will be filled till array 3
 
-    for(cnt = 0; cnt < len; cnt++)
+    if(phNxpNciHal_getChipType() != pn547C2)
+    {
+        antenna_self_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd);
+        memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_power_mgt_cmd, antenna_self_test_data[len].cmd.len);
+        antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+        memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_power_mgt_rsp, antenna_self_test_data[len].cmd.len);
+        antenna_self_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+        antenna_self_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+        antenna_self_test_data[len].rsp_validator = st_validator_testEquals;
+        antenna_self_test_data[len].ntf_validator = st_validator_null;
+        len++; //len val 4
+    }
+    antenna_self_test_data[len].cmd.len = sizeof(nfcc_antena_cmd5);
+    memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_antena_cmd5, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_antena_rsp2);
+    memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_antena_rsp2, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+    antenna_self_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+    antenna_self_test_data[len].rsp_validator = st_validator_testAntenna_Txldo;
+    antenna_self_test_data[len].ntf_validator = st_validator_null;
+    len++; //len val 5
+    if(phNxpNciHal_getChipType() != pn547C2)
+    {
+        antenna_self_test_data[len].cmd.len = sizeof(nfcc_antena_cmd7);
+        memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_antena_cmd7, antenna_self_test_data[len].cmd.len);
+    }
+    else
+    {
+        antenna_self_test_data[len].cmd.len = sizeof(nfcc_antena_cmd8);
+        memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_antena_cmd8, antenna_self_test_data[len].cmd.len);
+    }
+    antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_antena_rsp2);
+    memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_antena_rsp2, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+    antenna_self_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+    antenna_self_test_data[len].rsp_validator = st_validator_testAntenna_AgcVal;
+    antenna_self_test_data[len].ntf_validator = st_validator_null;
+    len++;//len val 6
+    antenna_self_test_data[len].cmd.len = sizeof(nfcc_antena_cmd9);
+    memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_antena_cmd9, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_antena_rsp2);
+    memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_antena_rsp2, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+    antenna_self_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+    antenna_self_test_data[len].rsp_validator = st_validator_testAntenna_AgcVal_FixedNfcLd;
+    antenna_self_test_data[len].ntf_validator = st_validator_null;
+    len++;//len val 7
+
+    if(NXP_NFCC_HW_ANTENNA_LOOP4_SELF_TEST)
+    {
+        antenna_self_test_data[len].cmd.len = sizeof(nfcc_antena_cmd6);
+        memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_antena_cmd6, antenna_self_test_data[len].cmd.len);
+        antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_antena_rsp2);
+        memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_antena_rsp2, antenna_self_test_data[len].cmd.len);
+        antenna_self_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+        antenna_self_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+        antenna_self_test_data[len].rsp_validator = st_validator_testAntenna_AgcVal_FixedNfcLd;
+        antenna_self_test_data[len].ntf_validator = st_validator_null;
+        len++;//len val 8
+    }
+
+    antenna_self_test_data[len].cmd.len = sizeof(nfcc_power_mgt_cmd_1);
+    memcpy(antenna_self_test_data[len].cmd.p_data, nfcc_power_mgt_cmd_1, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_rsp.len = sizeof(nfcc_power_mgt_rsp);
+    memcpy(antenna_self_test_data[len].exp_rsp.p_data, nfcc_power_mgt_rsp, antenna_self_test_data[len].cmd.len);
+    antenna_self_test_data[len].exp_ntf.len = NFCC_EXP_NTF_LEN_NULL;
+    antenna_self_test_data[len].exp_ntf.p_data[0] = NFCC_EXP_NTF_DATA_NULL;
+    antenna_self_test_data[len].rsp_validator = st_validator_testEquals;
+    antenna_self_test_data[len].ntf_validator = st_validator_null;
+    len++;//len val 9
+
+    for (cnt = 0; cnt < len; cnt++)
     {
         status = phNxpNciHal_performTest(&(antenna_self_test_data[cnt]));
-        if(status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
+        if (status == NFCSTATUS_RESPONSE_TIMEOUT || status == NFCSTATUS_FAILED)
         {
-            NXPLOG_NCIHAL_E("phNxpNciHal_AntennaSelfTest: commnad execution - FAILED\n");
+            NXPLOG_NCIHAL_E(
+                "phNxpNciHal_AntennaSelfTest: commnad execution - FAILED\n");
             break;
         }
     }
 
-    if(status == NFCSTATUS_SUCCESS)
+    if (status == NFCSTATUS_SUCCESS)
     {
-        if((gtxldo_status == NFCSTATUS_SUCCESS) && (gagc_value_status == NFCSTATUS_SUCCESS) &&
-           (gagc_nfcld_status == NFCSTATUS_SUCCESS) && (gagc_differential_status == NFCSTATUS_SUCCESS))
+        if ((gtxldo_status == NFCSTATUS_SUCCESS) &&
+                (gagc_value_status == NFCSTATUS_SUCCESS) &&
+                (gagc_nfcld_status == NFCSTATUS_SUCCESS))
         {
-            antenna_st_status = NFCSTATUS_SUCCESS;
-            NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - SUCESS\n");
+            if((NXP_NFCC_HW_ANTENNA_LOOP4_SELF_TEST) && (gagc_differential_status == NFCSTATUS_SUCCESS))
+            {
+                antenna_st_status = NFCSTATUS_SUCCESS;
+                NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - SUCESS\n");
+            }
+            else if (!NXP_NFCC_HW_ANTENNA_LOOP4_SELF_TEST)
+            {
+                antenna_st_status = NFCSTATUS_SUCCESS;
+                NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - SUCESS\n");
+            }
         }
-        else
+        if (antenna_st_status != NFCSTATUS_SUCCESS)
         {
             NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - FAILED\n");
+            NXPLOG_NCIHAL_D("gtxldo_status=%d gagc_value_status=%d gagc_nfcld_status=%d HW_ANTENNA_LOOP4_SELF_TEST=%d"
+                            "gagc_differential_status=%d\n", gtxldo_status,gagc_value_status,
+                            gagc_nfcld_status, NXP_NFCC_HW_ANTENNA_LOOP4_SELF_TEST, gagc_differential_status);
         }
     }
     else
     {
-        NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - FAILED\n");
+        NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - FAILED, status = %d\n", status);
     }
 
     NXPLOG_NCIHAL_D("phNxpNciHal_AntennaSelfTest - end\n");

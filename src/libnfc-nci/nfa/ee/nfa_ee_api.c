@@ -46,6 +46,7 @@
 #include "nfa_sys_int.h"
 #include "nfa_dm_int.h"
 
+
 /*****************************************************************************
 **  APIs
 *****************************************************************************/
@@ -634,7 +635,17 @@ tNFA_STATUS NFA_AddEePowerState(tNFA_HANDLE          ee_handle,
 *******************************************************************************/
 UINT16 NFA_GetAidTableSize()
 {
-    return NFA_EE_MAX_AID_CFG_LEN;
+    unsigned int nfa_ee_max_aid_cfg_len = NFA_EE_MAX_AID_CFG_LEN;
+
+    if (phNxpNciHal_getChipType() == pn547C2)
+    {
+        /* AID Entry and the Configuration size allocated is less
+         * in pn547
+         */
+    	nfa_ee_max_aid_cfg_len = NFA_EE_MAX_AID_CFG_LEN_PN547C2;
+    }
+
+    return nfa_ee_max_aid_cfg_len;
 }
 
 /*******************************************************************************
@@ -651,7 +662,7 @@ UINT16 NFA_GetRemainingAidTableSize()
 {
     UINT16 size = 0;
 
-    size = NFA_EE_MAX_AID_CFG_LEN - nfa_ee_lmrt_size();
+    size = NFA_GetAidTableSize() - nfa_ee_lmrt_size();
 
     return size ;
 }

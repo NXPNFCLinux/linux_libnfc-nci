@@ -33,34 +33,23 @@
 #include <phNfcCompId.h>
 
 #ifdef ANDROID
-#   define FW_DLL_ROOT_DIR "/vendor/firmware/"
+#   define FW_BIN_ROOT_DIR "/vendor/firmware/"
 #else
-#   define FW_DLL_ROOT_DIR ""
+#   define FW_BIN_ROOT_DIR ""
 #endif
-#   define FW_DLL_EXTENSION ".so"
+#   define FW_BIN_EXTENSION ".so"
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-
-/* Actual FW library name*/
-#define FW_LIB_PATH       FW_DLL_ROOT_DIR "lib" NXP_CHIP_NAME "_fw"          FW_DLL_EXTENSION
-/* Restore Currupted PLL Setttings/etc */
-#define PLATFORM_LIB_PATH FW_DLL_ROOT_DIR "lib" NXP_CHIP_NAME "_fw_platform" FW_DLL_EXTENSION
-/* Upgrade the public Key */
-#define PKU_LIB_PATH      FW_DLL_ROOT_DIR "lib" NXP_CHIP_NAME "_fw_pku"      FW_DLL_EXTENSION
-#else
-/* Actual FW library name*/
-#define FW_LIB_PATH       FW_DLL_ROOT_DIR "lib" NXP_CHIP_NAME "_fw"          FW_DLL_EXTENSION
-/* Restore Currupted PLL Setttings/etc */
-#define PLATFORM_LIB_PATH FW_DLL_ROOT_DIR "lib" NXP_CHIP_NAME "_fw_platform" FW_DLL_EXTENSION
-/* Upgrade the public Key */
-#define PKU_LIB_PATH      FW_DLL_ROOT_DIR "lib" NXP_CHIP_NAME "_fw_pku"      FW_DLL_EXTENSION
-
-#endif
 
 /* HAL Version number (Updated as per release) */
-#define NXP_MW_VERSION_MAJ  (1U)
-#define NXP_MW_VERSION_MIN  (0U)
+#define NXP_MW_VERSION_MAJ (0x02U)
+#define NXP_MW_VERSION_MIN (0x04U)
 
+#define GET_EEPROM_DATA (1U)
+#define SET_EEPROM_DATA (2U)
+#define BITWISE (1U)
+#define BYTEWISE (2U)
+#define GET_FW_DWNLD_FLAG (1U)
+#define RESET_FW_DWNLD_FLAG (2U)
 /*
  *****************************************************************
  ***********  System clock source selection configuration ********
@@ -87,9 +76,35 @@
 #define CLK_FREQ_19_2MHZ       2
 #define CLK_FREQ_24MHZ         3
 #define CLK_FREQ_26MHZ         4
-#define CLK_FREQ_38_4MHZ       5
-#define CLK_FREQ_52MHZ         6
+#define CLK_FREQ_32MHZ         5
+#define CLK_FREQ_38_4MHZ       6
+#define CLK_FREQ_52MHZ         7
 
+
+#define SET_CONFIG_CMD_PLL_13MHZ        {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x20, 0x08, 0x08,\
+                                        0x52, 0xA2, 0x02, 0x30, 0x01, 0xE1, 0x02}
+#define SET_CONFIG_CMD_DPLL_13MHZ       {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x26, 0x08, 0x40,\
+                                        0x42, 0xA3, 0x02, 0x88, 0x01, 0xE2, 0x02}
+#define SET_CONFIG_CMD_PLL_19_2MHZ      {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x20, 0x08, 0x88,\
+                                        0x51, 0xE3, 0x02, 0xB8, 0x21, 0xE1, 0x02}
+#define SET_CONFIG_CMD_DPLL_19_2MHZ     {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x26, 0x08, 0x88,\
+                                        0x01, 0xE2, 0x02, 0xF0, 0x00, 0xA2, 0x01}
+#define SET_CONFIG_CMD_PLL_24MHZ        {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x20, 0x08, 0x28,\
+                                         0xC2, 0xA2, 0x83, 0x88, 0x11, 0xE1, 0x02}
+#define SET_CONFIG_CMD_DPLL_24MHZ       {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x26, 0x08, 0x38,\
+                                         0x41, 0xD3, 0x02, 0x88, 0x01, 0xE2, 0x02}
+#define SET_CONFIG_CMD_PLL_26MHZ        {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x20, 0x08, 0x08,\
+                                         0x52, 0xA2, 0x82, 0x30, 0x01, 0xE1, 0x02}
+#define SET_CONFIG_CMD_DPLL_26MHZ       {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x26, 0x08, 0x20,\
+                                         0x41, 0xA3, 0x01, 0x88, 0x01, 0xE2, 0x02}
+#define SET_CONFIG_CMD_PLL_32MHZ        {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x20, 0x08, 0xB8, 0x51, 0xA3, 0x82, 0x88, 0xF1, 0xF0, 0x02}
+#define SET_CONFIG_CMD_DPLL_32MHZ       {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x26, 0x08, 0xB0,\
+                                         0x01, 0xA3, 0x82, 0x88, 0x01, 0xE2, 0x02}
+#define SET_CONFIG_CMD_PLL_38_4MHZ      {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x20, 0x08, 0x88,\
+                                         0x51, 0xE3, 0x82, 0x88, 0x21, 0xE1, 0x02}
+#define SET_CONFIG_CMD_DPLL_38_4MHZ     {0x20, 0x02, 0x0C, 0x01, 0xA0, 0x26, 0x08, 0x88,\
+                                        0x01, 0xE2, 0x82, 0xF0, 0x00, 0xA2, 0x01}
+										
 #define NXP_SYS_CLK_FREQ_SEL  CLK_FREQ_19_2MHZ /* Set to one of CLK_FREQ_<value> */
 
 #define CLK_TO_CFG_DEF         1

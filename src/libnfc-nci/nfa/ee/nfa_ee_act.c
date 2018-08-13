@@ -47,9 +47,7 @@
 #include "nfa_sys_int.h"
 #include "nfc_api.h"
 #include "nfa_ee_int.h"
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 #include "nci_config.h"
-#endif
 
 
 /* the de-bounce timer:
@@ -759,6 +757,16 @@ void nfa_ee_api_add_aid(tNFA_EE_MSG *p_data)
     }
     else
     {
+        unsigned int nfa_ee_max_aid_entry = NFA_EE_MAX_AID_ENTRIES;
+
+        if (phNxpNciHal_getChipType() == pn547C2)
+        {
+            /* AID Entry and the Configuration size allocated is less
+             * in pn547
+             */
+        	nfa_ee_max_aid_entry = NFA_EE_MAX_AID_ENTRIES_PN547C2;
+        }
+
         /* Find the total length so far */
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
         len = nfa_all_ee_find_total_aid_len();
@@ -766,16 +774,15 @@ void nfa_ee_api_add_aid(tNFA_EE_MSG *p_data)
         len = nfa_ee_find_total_aid_len(p_cb, 0);
 #endif
 
-
         /* make sure the control block has enough room to hold this entry */
         len_needed  = p_add->aid_len + 2; /* tag/len */
 
-        if ((len_needed + len) > NFA_EE_MAX_AID_CFG_LEN)
+        if ((len_needed + len) > NFA_GetAidTableSize())
         {
-            NFA_TRACE_ERROR3 ("Exceed capacity: (len_needed:%d + len:%d) > NFA_EE_MAX_AID_CFG_LEN:%d", len_needed, len, NFA_EE_MAX_AID_CFG_LEN);
+            NFA_TRACE_ERROR3 ("Exceed capacity: (len_needed:%d + len:%d) > NFA_EE_MAX_AID_CFG_LEN:%d", len_needed, len, NFA_GetAidTableSize);
             evt_data.status = NFA_STATUS_BUFFER_FULL;
         }
-        else if (p_cb->aid_entries < NFA_EE_MAX_AID_ENTRIES)
+        else if (p_cb->aid_entries < nfa_ee_max_aid_entry)
         {
             new_size = nfa_ee_total_lmrt_size() + 4 + p_add->aid_len; /* 4 = 1 (tag) + 1 (len) + 1(nfcee_id) + 1(power cfg) */
             if (new_size > NFC_GetLmrtSize())
@@ -819,7 +826,7 @@ void nfa_ee_api_add_aid(tNFA_EE_MSG *p_data)
         }
         else
         {
-            NFA_TRACE_ERROR1 ("Exceed NFA_EE_MAX_AID_ENTRIES:%d", NFA_EE_MAX_AID_ENTRIES);
+            NFA_TRACE_ERROR1 ("Exceed NFA_EE_MAX_AID_ENTRIES:%d", nfa_ee_max_aid_entry);
             evt_data.status = NFA_STATUS_BUFFER_FULL;
         }
     }
@@ -2552,9 +2559,10 @@ void nfa_ee_lmrt_to_nfcc(tNFA_EE_MSG *p_data)
     {
         more = FALSE;
     }
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-    find_and_resolve_tech_conflict();
-#endif
+    if (phNxpNciHal_getChipType() != pn547C2)
+    {
+        find_and_resolve_tech_conflict();
+    }
     /* add the routing for DH first */
     status  = NFA_STATUS_OK;
     max_len = NFC_GetLmrtSize();
@@ -2601,7 +2609,6 @@ void nfa_ee_lmrt_to_nfcc(tNFA_EE_MSG *p_data)
 }
 
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 /*******************************************************************************
 **
 ** Function         find_and_resolve_tech_conflict
@@ -2664,15 +2671,19 @@ void find_and_resolve_tech_conflict()
 
     NFA_TRACE_DEBUG5 ("%s:p_cb->nfcee_id=0x%x,p_cb->tech_switch_on= 0x%x,p_cb->tech_switch_off= 0x%x,p_cb->tech_battery_off= 0x%x", __FUNCTION__, p_cb->nfcee_id,p_cb->tech_switch_on,p_cb->tech_switch_off,p_cb->tech_battery_off);
 
-    //Preferred SE Selected.
-    if((GetNumValue(NAME_NXP_PRFD_TECH_SE, &preferred_se, sizeof(preferred_se))))
+    if (phNxpNciHal_getChipType() != pn547C2)
     {
-        NFA_TRACE_DEBUG2 ("%s:NXP_PRFD_TECH_SE=0x0%lu;", __FUNCTION__, preferred_se);
-        if(preferred_se==0x01)
-            preferred_se=0xc0; //Ese
-        else if(preferred_se==0x02)
-            preferred_se=0x02; //UICC
+        //Preferred SE Selected.
+        if((GetNumValue(NAME_NXP_PRFD_TECH_SE, &preferred_se, sizeof(preferred_se))))
+        {
+            NFA_TRACE_DEBUG2 ("%s:NXP_PRFD_TECH_SE=0x0%lu;", __FUNCTION__, preferred_se);
+            if(preferred_se==0x01)
+                preferred_se=0xc0; //Ese
+            else if(preferred_se==0x02)
+                preferred_se=0x02; //UICC
+        }
     }
+
     NFA_TRACE_DEBUG3 ("%s:techF_found=0x%x,techF_ee= 0x%x;", __FUNCTION__, techF_found,techF_ee);
     NFA_TRACE_DEBUG3 ("%s:techA_found=0x%x,techA_ee= 0x%x;", __FUNCTION__, techA_found,techA_ee);
 
@@ -2721,7 +2732,6 @@ void find_and_resolve_tech_conflict()
         NFA_TRACE_DEBUG1 ("%s:Exit",__FUNCTION__);
     }
 }
-#endif
 
 /*******************************************************************************
 **
@@ -2779,9 +2789,11 @@ UINT16 nfa_ee_lmrt_size()
 {
     NFA_TRACE_DEBUG0 ("nfa_ee_lmrt_size");
     int     len;
+    unsigned int nfa_ee_max_aid_cfg_len = NFA_GetAidTableSize();
+
     len = nfa_all_ee_find_total_aid_len() + 2 /* tag/len */ + 2 /*route/power state*/;
 
-    return len < NFA_EE_MAX_AID_CFG_LEN?len:NFA_EE_MAX_AID_CFG_LEN;
+    return len < nfa_ee_max_aid_cfg_len?len:nfa_ee_max_aid_cfg_len;
 }
 
 BOOLEAN nfa_ee_nfeeid_active(UINT8 nfee_id)

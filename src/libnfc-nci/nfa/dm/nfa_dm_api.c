@@ -1340,10 +1340,10 @@ tNFA_MW_VERSION NFA_GetMwVersion ()
     tNFA_MW_VERSION mwVer;
     NFA_TRACE_API1("0x%x:NFC MW Major Version:", NFC_NXP_MW_VERSION_MAJ);
     NFA_TRACE_API1("0x%x:NFC MW Minor Version:", NFC_NXP_MW_VERSION_MIN);
-    NFA_TRACE_API1("0x%x:NFC Android Version:", NFC_NXP_ANDROID_VER);
+    NFA_TRACE_API1("0x%x:NFC Android Version:", NFC_NXP_LINUX_VER);
     mwVer.major_version = NFC_NXP_MW_VERSION_MAJ;
     mwVer.minor_version = NFC_NXP_MW_VERSION_MIN;
-    mwVer.android_version = NFC_NXP_ANDROID_VER;
+    mwVer.android_version = NFC_NXP_LINUX_VER;
     NFA_TRACE_API2("mwVer:Major=0x%x,Minor=0x%x", mwVer.major_version,mwVer.minor_version);
     return mwVer;
 }

@@ -64,77 +64,79 @@ extern "C"
 
 //default general trasceive timeout in millisecond
 #define DEFAULT_GENERAL_TRANS_TIMEOUT  2000
-#define DEFAULT_PRESENCE_CHECK_DELAY 125000
+#define DEFAULT_PRESENCE_CHECK_MDELAY 125
 
 /*****************************************************************************
 **
 ** public variables and functions
 **
 *****************************************************************************/
-BOOLEAN    gIsTagDeactivating = FALSE;    // flag for nfa callback indicating we are deactivating for RF INT32erface switch
-BOOLEAN    gIsSelectingRfInterface = FALSE; // flag for nfa callback indicating we are selecting for RF INT32erface switch
-BOOLEAN    fNeedToSwitchBack = FALSE;
-nfcTagCallback_t *gTagCallback = NULL;
-tNFA_INTF_TYPE   sCurrentRfInterface = NFA_INTERFACE_ISO_DEP;
+// flag for nfa callback indicating we are deactivating for RF interface switch
+BOOLEAN              gIsTagDeactivating = FALSE;
+// flag for nfa callback indicating we are selecting for RF interface switch
+BOOLEAN              gIsSelectingRfInterface = FALSE;
+BOOLEAN              fNeedToSwitchBack = FALSE;
+nfcTagCallback_t     *gTagCallback = NULL;
+tNFA_INTF_TYPE       sCurrentRfInterface = NFA_INTERFACE_ISO_DEP;
 
 /*****************************************************************************
 **
 ** private variables and functions
 **
 *****************************************************************************/
-static INT32     sGeneralTransceiveTimeout = DEFAULT_GENERAL_TRANS_TIMEOUT;
-static BOOLEAN     sConnectOk = FALSE;
-static BOOLEAN     sConnectWaitingForComplete = FALSE;
-static BOOLEAN         sGotDeactivate = FALSE;
-static SyncEvent    sReconnectEvent;
-static SyncEvent    sTransceiveEvent;
-static SyncEvent    sPresenceCheckEvent;
-static SyncEvent    sNfaVSCResponseEvent;
-static SyncEvent    sNfaVSCNotificationEvent;
-static SyncEvent    sReadEvent;
-static BOOLEAN         sIsTagPresent = TRUE;
-static BOOLEAN         sPresCheckRequired = TRUE;
-static BOOLEAN         sIsTagInField;
-static BOOLEAN         sVSCRsp;
-static BOOLEAN         sReconnectFlag = FALSE;
-static Mutex            sRfInterfaceMutex;
-static UINT8 *sRxDataBuffer = NULL;
-static UINT32 sRxDataBufferLen = 0;
-static UINT32 sRxDataActualSize = -1;
-static BOOLEAN         sWaitingForTransceive = FALSE;
-static BOOLEAN         sTransceiveRfTimeout = FALSE;
-static tNFA_STATUS  sMakeReadonlyStatus = NFA_STATUS_FAILED;
-static BOOLEAN     sMakeReadonlyWaitingForComplete = FALSE;
-static BOOLEAN     sWriteOk = FALSE;
-static BOOLEAN     sWriteWaitingForComplete = FALSE;
-static BOOLEAN         sIsReadingNdefMessage = FALSE;
-static BOOLEAN         sFormatOk = FALSE;
-static sem_t        sMakeReadonlySem;
-static sem_t        sFormatSem;
-static sem_t        sWriteSem;
-static sem_t        sCheckNdefSem;
-static UINT32          sCurrentConnectedHandle = NFA_HANDLE_INVALID;
-static INT32          sCurrentConnectedTargetType = TARGET_TYPE_UNKNOWN;
-static UINT32     sCheckNdefMaxSize = 0;
-static BOOLEAN sIsCheckingNDef = FALSE;
-static BOOLEAN         sCheckNdefCardReadOnly = FALSE;
-static BOOLEAN     sCheckNdefWaitingForComplete = FALSE;
-static UINT32     sCheckNdefCurrentSize = 0;
-static tNFA_STATUS  sCheckNdefStatus = 0; //whether tag already contains a NDEF message
-static BOOLEAN         sCheckNdefCapable = FALSE; //whether tag has NDEF capability
-static IntervalTimer sSwitchBackTimer; // timer used to tell us to switch back to ISO_DEP frame INT32erface
+static INT32         sGeneralTransceiveTimeout = DEFAULT_GENERAL_TRANS_TIMEOUT;
+static BOOLEAN       sConnectOk = FALSE;
+static BOOLEAN       sConnectWaitingForComplete = FALSE;
+static BOOLEAN       sGotDeactivate = FALSE;
+static SyncEvent     sReconnectEvent;
+static SyncEvent     sTransceiveEvent;
+static SyncEvent     sPresenceCheckEvent;
+static SyncEvent     sNfaVSCResponseEvent;
+static SyncEvent     sNfaVSCNotificationEvent;
+static SyncEvent     sReadEvent;
+static BOOLEAN       sIsTagPresent = TRUE;
+static BOOLEAN       sPresCheckRequired = TRUE;
+static BOOLEAN       sIsTagInField;
+static BOOLEAN       sVSCRsp;
+static BOOLEAN       sReconnectFlag = FALSE;
+static Mutex         sRfInterfaceMutex;
+static UINT8         *sRxDataBuffer = NULL;
+static UINT32        sRxDataBufferLen = 0;
+static UINT32        sRxDataActualSize = -1;
+static BOOLEAN       sWaitingForTransceive = FALSE;
+static BOOLEAN       sTransceiveRfTimeout = FALSE;
+static tNFA_STATUS   sMakeReadonlyStatus = NFA_STATUS_FAILED;
+static BOOLEAN       sMakeReadonlyWaitingForComplete = FALSE;
+static BOOLEAN       sWriteOk = FALSE;
+static BOOLEAN       sWriteWaitingForComplete = FALSE;
+static BOOLEAN       sIsReadingNdefMessage = FALSE;
+static BOOLEAN       sFormatOk = FALSE;
+static sem_t         sMakeReadonlySem;
+static sem_t         sFormatSem;
+static sem_t         sWriteSem;
+static sem_t         sCheckNdefSem;
+static UINT32        sCurrentConnectedHandle = NFA_HANDLE_INVALID;
+static INT32         sCurrentConnectedTargetType = TARGET_TYPE_UNKNOWN;
+static UINT32        sCheckNdefMaxSize = 0;
+static BOOLEAN       sIsCheckingNDef = FALSE;
+static BOOLEAN       sCheckNdefCardReadOnly = FALSE;
+static BOOLEAN       sCheckNdefWaitingForComplete = FALSE;
+static UINT32        sCheckNdefCurrentSize = 0;
+static tNFA_STATUS   sCheckNdefStatus = 0; //whether tag already contains a NDEF message
+static BOOLEAN       sCheckNdefCapable = FALSE; //whether tag has NDEF capability
+static IntervalTimer sSwitchBackTimer; // timer used to tell us to switch back to ISO_DEP frame interface
 static IntervalTimer sPresenceCheckTimer; // timer used for presence cmd notification timeout.
 static IntervalTimer sReconnectNtfTimer ;
-static tNFA_HANDLE  sNdefTypeHandlerHandle = NFA_HANDLE_INVALID;
+static tNFA_HANDLE   sNdefTypeHandlerHandle = NFA_HANDLE_INVALID;
 
-static BOOLEAN sIsReconnecting = FALSE;
-static INT32 doReconnectFlag = 0x00;
+static BOOLEAN       sIsReconnecting = FALSE;
+static INT32         doReconnectFlag = 0x00;
 
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-UINT8 key1[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-UINT8 key2[6] = {0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7};
-BOOLEAN isMifare = FALSE;
-static UINT8 Presence_check_TypeB[] =  {0xB2};
+BOOLEAN              isMifare = FALSE;
+static UINT8         key1[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static UINT8         key2[] = {0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7};
+static UINT8         Presence_check_TypeB[] =  {0xB2};
 #endif
 
 static void nfaVSCCallback(UINT8 event, UINT16 param_len, UINT8 *p_param);
@@ -149,12 +151,13 @@ static BOOLEAN switchRfInterface(tNFA_INTF_TYPE rfInterface);
 static inline void setReconnectState(BOOLEAN flag);
 static INT32 nativeNfcTag_doReconnect ();
 
-extern BOOLEAN         gActivated;
-extern SyncEvent    gDeactivatedEvent;
-extern Mutex    gSyncMutex;
+extern BOOLEAN       gActivated;
+extern SyncEvent     gDeactivatedEvent;
+extern Mutex         gSyncMutex;
 
 void nativeNfcTag_abortWaits();
 void nativeNfcTag_resetPresenceCheck();
+void nativeNfcTag_releasePresenceCheck();
 
 static void nfaVSCNtfCallback(UINT8 event, UINT16 param_len, UINT8 *p_param)
 {
@@ -248,7 +251,7 @@ static inline void setReconnectState(BOOLEAN flag)
 ** Function:        reSelect
 **
 ** Description:     Deactivates the tag and re-selects it with the specified
-**                  rf INT32erface.
+**                  rf interface.
 **
 ** Returns:         status code, 0 on success, 1 on failure,
 **                  146 (defined in service) on tag lost
@@ -257,13 +260,13 @@ static inline void setReconnectState(BOOLEAN flag)
 static INT32 reSelect (tNFA_INTF_TYPE rfInterface, BOOLEAN fSwitchIfNeeded)
 {
     UINT32 handle = sCurrentConnectedHandle;
-    NXPLOG_API_D ("%s: enter; rf INT32f = %d, current INT32f = %d", __FUNCTION__, rfInterface, sCurrentRfInterface);
+    NXPLOG_API_D ("%s: enter; rf intf = %d, current intf = %d", __FUNCTION__, rfInterface, sCurrentRfInterface);
 
     sRfInterfaceMutex.lock ();
 
     if (fSwitchIfNeeded && (rfInterface == sCurrentRfInterface))
     {
-        // already in the requested INT32erface
+        // already in the requested interface
         sRfInterfaceMutex.unlock ();
         return 0;   // success
     }
@@ -363,7 +366,7 @@ static INT32 reSelect (tNFA_INTF_TYPE rfInterface, BOOLEAN fSwitchIfNeeded)
             }
             else
             {
-                NXPLOG_API_D ("%s: select INT32erface %u", __FUNCTION__, rfInterface);
+                NXPLOG_API_D ("%s: select interface %u", __FUNCTION__, rfInterface);
 
                 if (NFA_STATUS_OK != (status = NFA_Select (natTag.mTechHandles[handle], natTag.mTechLibNfcTypes[handle], rfInterface)))
                 {
@@ -420,8 +423,8 @@ static INT32 reSelect (tNFA_INTF_TYPE rfInterface, BOOLEAN fSwitchIfNeeded)
 **
 ** Function:        switchRfInterface
 **
-** Description:     Switch controller's RF INT32erface to frame, ISO-DEP, or NFC-DEP.
-**                  rfInterface: Type of RF INT32erface.
+** Description:     Switch controller's RF interface to frame, ISO-DEP, or NFC-DEP.
+**                  rfInterface: Type of RF interface.
 **
 ** Returns:         True if ok.
 **
@@ -429,7 +432,7 @@ static INT32 reSelect (tNFA_INTF_TYPE rfInterface, BOOLEAN fSwitchIfNeeded)
 static BOOLEAN switchRfInterface (tNFA_INTF_TYPE rfInterface)
 {
     UINT32 handle = sCurrentConnectedHandle;
-    NXPLOG_API_D ("%s: rf INT32f = %d", __FUNCTION__, rfInterface);
+    NXPLOG_API_D ("%s: rf intf = %d", __FUNCTION__, rfInterface);
     NfcTag& natTag = NfcTag::getInstance ();
 
     if (natTag.mTechLibNfcTypes[handle] != NFC_PROTOCOL_ISO_DEP)
@@ -438,7 +441,7 @@ static BOOLEAN switchRfInterface (tNFA_INTF_TYPE rfInterface)
         return TRUE;
     }
 
-    NXPLOG_API_D ("%s: new rf INT32f = %d, cur rf INT32f = %d", __FUNCTION__, rfInterface, sCurrentRfInterface);
+    NXPLOG_API_D ("%s: new rf intf = %d, cur rf intf = %d", __FUNCTION__, rfInterface, sCurrentRfInterface);
 
     BOOLEAN rVal = TRUE;
     if (rfInterface != sCurrentRfInterface)
@@ -475,12 +478,33 @@ static void *presenceCheckThread(void *arg)
         }
         else
         {
+            NXPLOG_API_D("%s: Presence Check - Scheduled", __FUNCTION__);
             sPresCheckRequired = TRUE;
         }
         gSyncMutex.unlock();
-        usleep(DEFAULT_PRESENCE_CHECK_DELAY);
+
+        if ((NfcTag::getInstance ().getActivationState () != NfcTag::Active)
+              || FALSE == sIsTagPresent)
+        {
+            NXPLOG_API_D ("%s: Tag Absent/Deactivated.... Exit Check ", __FUNCTION__);
+            break;
+        }
+        else
+        {
+            SyncEventGuard g (gDeactivatedEvent);
+            if(gDeactivatedEvent.wait(DEFAULT_PRESENCE_CHECK_MDELAY))
+            {
+                NXPLOG_API_D ("%s: Tag Deactivated Event Received.. Exit Presence Check ", __FUNCTION__);
+                break;
+            }
+            else
+            {
+               NXPLOG_API_D ("%s: Presence Check Re-Scheduled", __FUNCTION__);
+            }
+        }
     }
     doDisconnect ();
+
     if(!NfcTag::getInstance().mNfcDisableinProgress)
     {
         if(gTagCallback && (NULL != gTagCallback->onTagDeparture))
@@ -698,7 +722,7 @@ static BOOLEAN doPresenceCheck ()
 
     if (NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_MIFARE)
     {
-        NXPLOG_API_E ("Calling EXTNS_MfcPresenceCheck");
+        NXPLOG_API_D ("Calling EXTNS_MfcPresenceCheck");
         status = EXTNS_MfcPresenceCheck();
         if (status == NFCSTATUS_SUCCESS)
         {
@@ -718,6 +742,7 @@ static BOOLEAN doPresenceCheck ()
         status = NFA_RwPresenceCheck (NfcTag::getInstance().getPresenceCheckAlgorithm());
         if (status == NFA_STATUS_OK)
         {
+            NXPLOG_API_D ("%s: NFA_RwPresenceCheck Wait.. ", __FUNCTION__);
             sPresenceCheckEvent.wait ();
             isPresent = sIsTagPresent ? TRUE : FALSE;
         }
@@ -749,7 +774,7 @@ static void ndefHandlerCallback (tNFA_NDEF_EVT event, tNFA_NDEF_EVT_DATA *eventD
 
     switch (event)
     {
-    case NFA_NDEF_REGISTER_EVT:
+        case NFA_NDEF_REGISTER_EVT:
         {
             tNFA_NDEF_REGISTER& ndef_reg = eventData->ndef_reg;
             NXPLOG_API_D ("%s: NFA_NDEF_REGISTER_EVT; status=0x%X; h=0x%X", __FUNCTION__, ndef_reg.status, ndef_reg.ndef_type_handle);
@@ -757,7 +782,7 @@ static void ndefHandlerCallback (tNFA_NDEF_EVT event, tNFA_NDEF_EVT_DATA *eventD
         }
         break;
 
-    case NFA_NDEF_DATA_EVT:
+        case NFA_NDEF_DATA_EVT:
         {
             NXPLOG_API_D ("%s: NFA_NDEF_DATA_EVT; data_len = %lu", __FUNCTION__, eventData->ndef_data.len);
             sRxDataActualSize = eventData->ndef_data.len;
@@ -772,9 +797,11 @@ static void ndefHandlerCallback (tNFA_NDEF_EVT event, tNFA_NDEF_EVT_DATA *eventD
         }
         break;
 
-    default:
-        NXPLOG_API_E ("%s: Unknown event %u ????", __FUNCTION__, event);
-        break;
+        default:
+        {
+            NXPLOG_API_E ("%s: Unknown event %u ????", __FUNCTION__, event);
+            break;
+        }
     }
 }
 
@@ -1220,6 +1247,22 @@ void nativeNfcTag_resetPresenceCheck ()
 
 /*******************************************************************************
 **
+** Function:        nativeNfcTag_releasePresenceCheck
+**
+** Description:     Reset variables related to presence-check.
+**
+** Returns:         None
+**
+*******************************************************************************/
+void nativeNfcTag_releasePresenceCheck ()
+{
+    SyncEventGuard guard (sPresenceCheckEvent);
+    sIsTagPresent = FALSE;
+    sPresenceCheckEvent.notifyOne ();
+}
+
+/*******************************************************************************
+**
 ** Function:        nativeNfcTag_doPresenceCheckResult
 **
 ** Description:     Receive the result of presence-check.
@@ -1305,28 +1348,33 @@ void nativeNfcTag_doCheckNdefResult (tNFA_STATUS status, UINT32 maxSize, UINT32 
         sCheckNdefMaxSize = 0;
         sCheckNdefCurrentSize = 0;
         sCheckNdefCardReadOnly = flags & RW_NDEF_FL_READ_ONLY;
-        if ((flags & RW_NDEF_FL_UNKNOWN) == 0) //if stack understands the tag
+#if (defined(NDEF_WRITE_ON_NON_NDEF_TAG) && (NDEF_WRITE_ON_NON_NDEF_TAG == 1))
+        /* Ignore Below to Avoid Formatting the card while Write NDEF */
+        /* if stack understands the tag */
+        if ((flags & RW_NDEF_FL_UNKNOWN) == 0)
         {
-            if (flags & RW_NDEF_FL_SUPPORTED) //if tag is ndef capable
+             /* if tag is NDEF capable */
+            if (flags & RW_NDEF_FL_SUPPORTED)
             {
                 sCheckNdefCapable = TRUE;
                 sCheckNdefMaxSize = maxSize;
             }
         }
-        else
-        {
-            sCheckNdefCapable = TRUE;
-            sCheckNdefMaxSize = maxSize;
-        }
+#endif /* (defined(NDEF_WRITE_ON_NON_NDEF_TAG) && (NDEF_WRITE_ON_NON_NDEF_TAG == 1)) */
     }
     else
     {
+        if (sCheckNdefStatus == NFA_STATUS_TIMEOUT)
+        {
+            NXPLOG_API_D ("%s: Tag is lost, set state to deactivated", __FUNCTION__);
+            doDisconnect ();
+        }
+
         NXPLOG_API_E ("%s: unknown status=0x%X", __FUNCTION__, status);
         sCheckNdefMaxSize = 0;
         sCheckNdefCurrentSize = 0;
         sCheckNdefCardReadOnly = FALSE;
     }
-    NXPLOG_API_D ("%s:end %d, %d, %d\n)", __FUNCTION__, sCheckNdefStatus, sCheckNdefCapable, sCheckNdefMaxSize);
     sem_post (&sCheckNdefSem);
 }
 
@@ -1396,6 +1444,13 @@ void nativeNfcTag_onTagArrival(nfc_tag_info_t *tag)
         else
         {
             NXPLOG_API_E ("%s: deactivate failed; error=0x%X", __FUNCTION__, nfaStat);
+        }
+    }
+    else
+    {
+        if(pthread_setname_np(presenceCheck_thread,"PRXMTY_CHK_TSK"))
+        {
+        	NXPLOG_API_E("pthread_setname_np in %s failed", __FUNCTION__);
         }
     }
 }
@@ -1486,7 +1541,9 @@ BOOLEAN nativeNfcTag_checkNdef(UINT32 tagHandle, ndef_info_t *info)
     if (NfcTag::getInstance ().mTechLibNfcTypes[tagHandle] == NFA_PROTOCOL_MIFARE)
     {
         status = EXTNS_MfcCheckNDef ();
-    }else{
+    }
+    else
+    {
         status = NFA_RwDetectNDef ();
     }
 
@@ -1680,27 +1737,25 @@ INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength
     NXPLOG_API_D ("%s: enter; len = %zu", __FUNCTION__, dataLength);
     if (tagHandle != sCurrentConnectedHandle)
     {
-        NXPLOG_API_D ("%s: Wrong tag handle!\n)", __FUNCTION__);
+        NXPLOG_API_E ("%s: Wrong tag handle!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
-    if (sCheckNdefCapable && (sCheckNdefMaxSize < dataLength))
+    if (sCheckNdefCapable && sCheckNdefMaxSize < dataLength)
     {
-        NXPLOG_API_D ("%s: NDEF message is too large!\n", __FUNCTION__);
+        NXPLOG_API_E ("%s: NDEF message is too large!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
     if (NFA_STATUS_OK != NDEF_MsgValidate(data, dataLength,  FALSE))
     {
-        NXPLOG_API_D ("%s: not NDEF message!\n)", __FUNCTION__);
+        NXPLOG_API_E ("%s: not NDEF message!\n)", __FUNCTION__);
         return NFA_STATUS_FAILED;
     }
     /* Create the write semaphore */
     if (sem_init (&sWriteSem, 0, 0) == -1)
     {
-        NXPLOG_API_D ("%s: semaphore creation failed (errno=0x%08x)", __FUNCTION__, errno);
+        NXPLOG_API_E ("%s: semaphore creation failed (errno=0x%08x)", __FUNCTION__, errno);
         return NFA_STATUS_FAILED;
     }
-
-    NXPLOG_API_D ("%s: continue %d, %d\n)", __FUNCTION__, sCheckNdefCapable, sCheckNdefMaxSize);
 
     gSyncMutex.lock();
     if (!nativeNfcManager_isNfcActive())
@@ -1752,7 +1807,6 @@ INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8 *data,  UINT32 dataLength
                 goto TheEnd;
             }
         }
-
         NXPLOG_API_D ("%s: try write", __FUNCTION__);
         status = NFA_RwWriteNDef (data, dataLength);
     }
@@ -1823,7 +1877,7 @@ TheEnd:
 ** Returns:         0 if ok.
 **
 *******************************************************************************/
-INT32 nativeNfcTag_doMakeReadonly (UINT32 tagHandle)
+INT32 nativeNfcTag_doMakeReadonly (UINT32 tagHandle, UINT8 *key, UINT8 key_size)
 {
     tNFA_STATUS result = NFA_STATUS_FAILED;
     tNFA_STATUS status = NFA_STATUS_FAILED;
@@ -1854,7 +1908,7 @@ INT32 nativeNfcTag_doMakeReadonly (UINT32 tagHandle)
     if (NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_MIFARE)
     {
         NXPLOG_API_E ("Calling EXTNS_MfcSetReadOnly");
-        status = EXTNS_MfcSetReadOnly();
+        status = EXTNS_MfcSetReadOnly(key,key_size);
     }
     else
     {
@@ -1937,13 +1991,16 @@ BOOLEAN nativeNfcTag_isFormatable(UINT32 tagHandle)
          * Determines whether this is a formatable IsoDep tag - currectly only NXP DESFire
          * is supported.
          */
-        UINT8  cmd[] = {0x90, 0x60, 0x00, 0x00, 0x00};
-        UINT8  resp[9] = {0x0};
-        INT32 respLength;
+        UINT8  get_version[] = {0x90, 0x60, 0x00, 0x00, 0x00};
+        UINT8  resp1[9] = {0x0};
+        UINT8  resp2[9] = {0x0};
+        UINT8  resp3[16] = {0x0};
+        INT32  respLength;
         if(NfcTag::getInstance().isMifareDESFire())
         {
+            UINT8  addnl_info[] = {0x90, 0xAF, 0x00, 0x00, 0x00};
             /* Identifies as DESfire, use get version cmd to be sure */
-            respLength = nativeNfcTag_doTransceive(tagHandle, cmd, 5, resp, 9, sGeneralTransceiveTimeout);
+            respLength = nativeNfcTag_doTransceive(tagHandle, get_version, sizeof(get_version), resp1, sizeof(resp1), sGeneralTransceiveTimeout);
             // Check whether the response matches a typical DESfire
             // response.
             // libNFC even does more advanced checking than we do
@@ -1951,13 +2008,24 @@ BOOLEAN nativeNfcTag_isFormatable(UINT32 tagHandle)
             // major/minor sw version and NXP as a manufacturer.
             // We don't want to do such checking here, to avoid
             // having to change code in multiple places.
-            // A succesful (wrapped) DESFire getVersion command returns
+            // A successful (wrapped) DESFire getVersion command returns
             // 9 bytes, with byte 7 0x91 and byte 8 having status
             // code 0xAF (these values are fixed and well-known).
-            if (respLength == 9 && resp[7] == 0x91 && resp[8] == 0xAF)
+            if (respLength == sizeof(resp1) && resp1[respLength-2] == 0x91 && resp1[respLength-1] == 0xAF)
             {
-                isFormattable = TRUE;
+                /* Get remaining software Version information */
+                respLength = nativeNfcTag_doTransceive(tagHandle, addnl_info, sizeof(addnl_info), resp2, sizeof(resp2), sGeneralTransceiveTimeout);
+                if (respLength == sizeof(resp2) && resp2[respLength-2] == 0x91 && resp2[respLength-1] == 0xAF)
+                {
+                    /* Get  the final remaining Version information */
+                    respLength = nativeNfcTag_doTransceive(tagHandle, addnl_info, sizeof(addnl_info), resp3, sizeof(resp3), sGeneralTransceiveTimeout);
+                    if (respLength == sizeof(resp3) && resp3[respLength-2] == 0x91 && resp3[respLength-1] == 0x00)
+                    {
+                        isFormattable = TRUE;
+                    }
+                }
             }
+
         }
         break;
     }
@@ -1976,13 +2044,11 @@ INT32 nativeNfcTag_doFormatTag(UINT32 tagHandle)
 #endif
 
     gSyncMutex.lock();
-    sFormatOk = FALSE;
     if (!nativeNfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         goto End;
     }
-    sFormatOk = FALSE;
 
     if (tagHandle != sCurrentConnectedHandle)
     {
@@ -1998,6 +2064,7 @@ INT32 nativeNfcTag_doFormatTag(UINT32 tagHandle)
     }
 
     sem_init (&sFormatSem, 0, 0);
+    sFormatOk = FALSE;
     if (NfcTag::getInstance ().mTechLibNfcTypes[handle] == NFA_PROTOCOL_MIFARE)
     {
         status = nativeNfcTag_doReconnect ();
@@ -2019,7 +2086,7 @@ INT32 nativeNfcTag_doFormatTag(UINT32 tagHandle)
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
         if(sFormatOk == TRUE && isMifare == TRUE)
         {
-            NXPLOG_API_D ("Formay with First Key Success");
+            NXPLOG_API_D ("Format with First Key Success");
         }
 #endif
     }
@@ -2053,11 +2120,11 @@ INT32 nativeNfcTag_doFormatTag(UINT32 tagHandle)
 
         if(sFormatOk)
         {
-            NXPLOG_API_D ("Formay with Second Key Success");
+            NXPLOG_API_D ("Format with Second Key Success");
         }
         else
         {
-            NXPLOG_API_D ("Formay with Second Key Failed");
+            NXPLOG_API_D ("Format with Second Key Failed");
         }
     }
 #endif
@@ -2117,7 +2184,7 @@ INT32 nativeNfcTag_switchRF(UINT32 tagHandle, BOOLEAN isFrameRF)
         {
             if (natTag.mTechList[j] == TARGET_TYPE_ISO14443_3A || natTag.mTechList[j] == TARGET_TYPE_ISO14443_3B)
             {
-                NXPLOG_API_D ("%s: switching to tech: %d need to switch rf INT32f to frame", __FUNCTION__, natTag.mTechList[j]);
+                NXPLOG_API_D ("%s: switching to tech: %d need to switch rf intf to frame", __FUNCTION__, natTag.mTechList[j]);
                 retCode = switchRfInterface(NFA_INTERFACE_FRAME) ? NFA_STATUS_OK : NFA_STATUS_FAILED;
                 break;
             }
@@ -2221,6 +2288,8 @@ INT32 nativeNfcTag_doTransceive (UINT32 handle, UINT8* txBuffer, INT32 txBufferL
         {
             NXPLOG_API_E ("%s: wait response timeout", __FUNCTION__);
             sRxDataActualSize = 0;
+            NXPLOG_API_D ("%s: Tag is lost, set state to deactivated", __FUNCTION__);
+            doDisconnect ();
             break;
         }
 

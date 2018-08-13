@@ -822,6 +822,17 @@ BOOLEAN nfa_ce_activate_ntf (tNFA_CE_MSG *p_ce_msg)
     UINT8 i;
     BOOLEAN t4t_activate_pending = FALSE;
 
+    UINT8 uicc_direct_intf = NCI_INTERFACE_UICC_DIRECT;
+    UINT8 ese_direct_intf = NCI_INTERFACE_ESE_DIRECT;
+
+	if(phNxpNciHal_getChipType() == pn547C2)
+	{
+		/* RU: Decrement the Direct interface Values for the PN547
+		 *  */
+		uicc_direct_intf--;
+		ese_direct_intf--;
+	}
+
     NFA_TRACE_DEBUG1 ("nfa_ce_activate_ntf () protocol=%d", p_ce_msg->activate_ntf.p_activation_params->protocol);
 
     /* Tag is in listen active state */
@@ -831,7 +842,7 @@ BOOLEAN nfa_ce_activate_ntf (tNFA_CE_MSG *p_ce_msg)
     memcpy (&p_cb->activation_params, p_activation_params, sizeof (tNFC_ACTIVATE_DEVT));
 
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-    if (p_cb->activation_params.intf_param.type == NCI_INTERFACE_UICC_DIRECT || p_cb->activation_params.intf_param.type == NCI_INTERFACE_ESE_DIRECT )
+    if (p_cb->activation_params.intf_param.type == uicc_direct_intf || p_cb->activation_params.intf_param.type == ese_direct_intf )
     {
         memcpy (&(conn_evt.activated.activate_ntf), &p_cb->activation_params, sizeof (tNFC_ACTIVATE_DEVT));
         for (i=0; i<NFA_CE_LISTEN_INFO_IDX_INVALID; i++)

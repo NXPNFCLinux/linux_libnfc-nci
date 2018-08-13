@@ -23,6 +23,7 @@
 #include <phDnldNfc.h>
 #include <phDnldNfc_Cmd.h>
 #include <phDnldNfc_Status.h>
+#include <phNxpNciHal.h>
 
 #define PHDNLDNFC_CMDRESP_MAX_BUFF_SIZE   (0x100U)  /* DL Host Frame Buffer Size for all CMD/RSP
                                                          except pipelined WRITE */

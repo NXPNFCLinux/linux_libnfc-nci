@@ -541,6 +541,13 @@ INT32 nativeNfcSnep_startServer(nfcSnepServerCallback_t *serverCallback)
         status = NFA_STATUS_FAILED;
         goto clean_and_return;
     }
+    else
+    {
+        if(pthread_setname_np(snepRespThread,"NFC_SNEP_RESP"))
+        {
+        	NXPLOG_API_E("pthread_setname_np in %s failed", __FUNCTION__);
+        }
+    }
 
     sSnepServerState = SNEP_SERVER_STARTED;
 clean_and_return:
@@ -607,7 +614,12 @@ INT32 nativeNfcSnep_putMessage(UINT8* msg, UINT32 length)
         status = NFA_STATUS_FAILED;
         goto clean_and_return;
     }
-    if (sSnepClientHandle){
+#if (NFC_SNEP_PUT_DISCONNECT == 1)
+    if (sSnepClientHandle)
+#else
+    if ((sSnepClientHandle) && (sSnepClientConnectionHandle == 0))
+#endif
+	{
         SyncEventGuard guard (sNfaSnepClientConnEvent);
         if(NFA_STATUS_OK != NFA_SnepConnect(sSnepClientHandle, SNEP_SERVER_NAME))
         {
@@ -637,6 +649,7 @@ INT32 nativeNfcSnep_putMessage(UINT8* msg, UINT32 length)
             sSnepClientPutState = NFA_STATUS_FAILED;
         }
     }
+#if (NFC_SNEP_PUT_DISCONNECT == 1)
     /* Disconnect from Snep Server */
     if (sSnepClientConnectionHandle != 0)
     {
@@ -648,6 +661,7 @@ INT32 nativeNfcSnep_putMessage(UINT8* msg, UINT32 length)
         }
         sNfaSnepClientDisconnEvent.wait();
     }
+#endif
 clean_and_return:
     NXPLOG_API_D ("%s: return = %d", __FUNCTION__, status);
     gSyncMutex.unlock();

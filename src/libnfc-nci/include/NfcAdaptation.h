@@ -83,6 +83,7 @@ class NfcAdaptation
 public:
     virtual ~NfcAdaptation();
     void    Initialize();
+    void    Configure();
     void    Finalize();
     static  NfcAdaptation& GetInstance();
     tHAL_NFC_ENTRY* GetHalEntryFuncs ();

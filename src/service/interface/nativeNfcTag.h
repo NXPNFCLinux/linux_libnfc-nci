@@ -87,7 +87,7 @@ extern INT32 nativeNfcTag_doFormatTag(UINT32 tagHandle);
 ** Returns:         0 if success.
 **
 *******************************************************************************/
-extern INT32 nativeNfcTag_doMakeReadonly (UINT32 tagHandle);
+extern INT32 nativeNfcTag_doMakeReadonly (UINT32 tagHandle,UINT8 *key, UINT8 key_size);
 
 extern INT32 nativeNfcTag_switchRF(UINT32 tagHandle, BOOLEAN isFrameRF);
 

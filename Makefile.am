@@ -3,52 +3,42 @@ lib_LTLIBRARIES = libnfc_nci_linux.la
 sbin_PROGRAMS = nfcDemoApp 
 nfcDemoApp_DEPENDENCIES = libnfc_nci_linux.la
 
+configdir = ${sysconfdir}
+
+config_DATA = conf/libnfc-nci.conf conf/libnfc-nxp-init.conf \
+				conf/libnfc-nxp-pn547.conf conf/libnfc-nxp-pn548.conf
+ 
+pkgconfiglibdir = $(libdir)/pkgconfig
+
+pkgconfiglib_DATA = \
+	libnfc-nci.pc
+
+AM_CPPFLAGS = \
+	-I$(srcdir)/src/include \
+	$(INCLUDE_PARAMS) \
+	$(libnfc_nci_linux_la_FLAGS)
+
 AM_LDFLAGS = $(LDFLAGS) -Bstatic 
 
+nfcDemoApp_FLAGS = -I$(srcdir)/demoapp -I$(srcdir)/src/include 
+
 if LLCP1_3
+AM_CPPFLAGS += \
+	-I$(openssldir)/include
 AM_LDFLAGS += -L$(openssldir)/lib -lcrypto -lssl
 endif
 
 if ABEND
 lib_LTLIBRARIES += libARMBoard.la
 libnfc_nci_linux_la_DEPENDENCIES = libARMBoard.la
-endif
-
-nfcDemoApp_FLAGS = -I$(srcdir)/demoapp -I$(srcdir)/src/include 
-
-AM_CPPFLAGS = \
-	-I$(srcdir)/src/include \
-	$(INCLUDE_PARAMS) \
-	$(libnfc_nci_linux_la_FLAGS) \
-	$(nfcDemoApp_FLAGS)
-
-if LLCP1_3
-AM_CPPFLAGS += \
-	-I$(openssldir)/include
-endif
-
-if LPCUSBSIO
-AM_LDFLAGS += `pkg-config libudev --libs` 
-endif
-	
-if ABEND
 AM_CPPFLAGS += \
 	$(libARMBoard_la_FLAGS) 
 endif
 
-configdir = ${sysconfdir}
-
 if LPCUSBSIO
+AM_LDFLAGS += `pkg-config libudev --libs` 
 udevrules_DATA = src/halimpl/pn54x/tml/lpcusbsio/97-lpcusbsio-hid.rules
 udevrulesdir = /etc/udev/rules.d
-endif
-
-if PN7120
-config_DATA = conf/PN7120/libnfc-brcm.conf conf/PN7120/libnfc-nxp.conf
-endif
-
-if PN7150
-config_DATA = conf/PN7150/libnfc-brcm.conf conf/PN7150/libnfc-nxp.conf
 endif
 
 LIBNFC_NCI_INCLUDE := \
@@ -152,7 +142,7 @@ HALIMPL_INCLUDE := \
 	src/halimpl/pn54x/tml/i2c \
 	src/halimpl/pn54x/core \
 	src/halimpl/pn54x/self-test
-	
+
 HALIMPL_SOURCE := \
 	src/halimpl/pn54x/tml/phDal4Nfc_messageQueueLib.c \
 	src/halimpl/pn54x/tml/phOsalNfc_Timer.c \
@@ -188,7 +178,7 @@ HALIMPL_INCLUDE := \
 	src/halimpl/pn54x/tml/lpcusbsio/hid \
 	src/halimpl/pn54x/core \
 	src/halimpl/pn54x/self-test
-	
+
 HALIMPL_SOURCE := \
 	src/halimpl/pn54x/tml/phDal4Nfc_messageQueueLib.c \
 	src/halimpl/pn54x/tml/phOsalNfc_Timer.c \
@@ -264,13 +254,13 @@ HALIMPL_SOURCE := \
 	src/halimpl/pn54x/hal/phNxpNciHal.c \
 	src/halimpl/pn54x/utils/phNxpNciHal_utils.c \
 	src/halimpl/pn54x/utils/phNxpConfig.cpp
-	
+
 libARMBoard_la_INCLUDE := \
 	src/halimpl/pn54x/tml/abend/LibRpc/inc \
 	src/halimpl/pn54x/tml/abend/LibRpc/src \
 	src/halimpl/pn54x/tml/abend/LibRpc/src/AddOn \
 	src/halimpl/pn54x/tml/abend/LibRpc/src/gen
-	
+
 libARMBoard_la_SOURCES := \
 	src/halimpl/pn54x/tml/abend/LibRpc/src/phRpc_D.c \
 	src/halimpl/pn54x/tml/abend/LibRpc/src/phRpc_H.c \
@@ -339,15 +329,7 @@ INCLUDE_PARAMS :=$(LIBNFC_NCI_INCLUDE:%=-I$(srcdir)/%)
 INCLUDE_PARAMS +=$(HALIMPL_INCLUDE:%=-I$(srcdir)/%)
 INCLUDE_PARAMS +=$(SERVICE_INCLUDE:%=-I$(srcdir)/%)
 
-#variables for NFC_NXP_CHIP_TYPE
-PN547C2 := 1
-PN548C2 := 2
-PN551C2 := 3
-
-libnfc_nci_linux_la_FLAGS = 
-libnfc_nci_linux_la_FLAGS += -DPN547C2=1
-libnfc_nci_linux_la_FLAGS += -DPN548C2=2
-libnfc_nci_linux_la_FLAGS += -DPN551C2=3
+libnfc_nci_linux_la_FLAGS =
 
 if LPCUSBSIO
 libnfc_nci_linux_la_FLAGS += -DPHFL_TML_LPCUSBSIO 
@@ -361,10 +343,15 @@ if ALT
 libnfc_nci_linux_la_FLAGS += -DPHFL_TML_ALT_NFC 
 endif
 
-libnfc_nci_linux_la_FLAGS += -pthread -w -g
+if DEBUG
+libnfc_nci_linux_la_FLAGS += -DDEBUG
+else
+libnfc_nci_linux_la_FLAGS += -DNDEBUG
+endif
+
+libnfc_nci_linux_la_FLAGS += -pthread -w
 libnfc_nci_linux_la_FLAGS += -DNFC_NXP_NOT_OPEN_INCLUDED=TRUE
 libnfc_nci_linux_la_FLAGS += -DNXP_HW_SELF_TEST
-libnfc_nci_linux_la_FLAGS += -DDEBUG
 libnfc_nci_linux_la_FLAGS += -DNXP_NFC_NATIVE_ENABLE_HCE=TRUE
 
 if LLCP1_3
@@ -373,23 +360,12 @@ else
 libnfc_nci_linux_la_FLAGS += -DNFC_NXP_LLCP_SECURED_P2P=FALSE
 endif
 
-if PN7120
-libnfc_nci_linux_la_FLAGS += -DNFC_NXP_CHIP_TYPE=PN547C2 -DNXP_CHIP_NAME=\"pn7120\"
 libnfc_nci_linux_la_FLAGS += -DPH_NCI_NXP_HAL_ENABLE_FW_DOWNLOAD=FALSE
-endif
-
-if PN7150
-libnfc_nci_linux_la_FLAGS += -DNFC_NXP_CHIP_TYPE=PN548C2 -DNXP_CHIP_NAME=\"pn7150\"
-libnfc_nci_linux_la_FLAGS += -DPH_NCI_NXP_HAL_ENABLE_FW_DOWNLOAD=FALSE
-endif
 
 libnfc_nci_linux_la_LIBADD = $(AC_LIBOBJS)
 libnfc_nci_linux_la_LDFLAGS := $(AM_LDFLAGS)
-libnfc_nci_linux_la_LDFLAGS +=-DPN547C2=1
-libnfc_nci_linux_la_LDFLAGS +=-DPN548C2=2
-libnfc_nci_linux_la_LDFLAGS +=-DPN551C2=3
-libnfc_nci_linux_la_LDFLAGS += -shared -pthread -ldl -lrt -fPIC -release 1 -version-info 0:0:0
+libnfc_nci_linux_la_LDFLAGS += -shared -pthread -ldl -lrt -fPIC -release 1 -versionnfo 0:0:0
+
 
 nfcDemoApp_LDFLAGS = -pthread -ldl -lrt -lnfc_nci_linux
-
 

@@ -68,15 +68,15 @@ INT32 nativeNfcManager_doDeinitialize ();
 ** Function:        nfcManager_enableDiscovery
 **
 ** Description:     Start polling and listening for devices.
-**                  e: JVM environment.
-**                  o: Java object.
 **                  technologies_mask: the bitmask of technologies for which to enable discovery
-**                  enable_lptd: whether to enable low power polling (default: false)
+**                  reader mode: 
+**                  enable_host_routing:
+**                  restart:
 **
-** Returns:         None
+** Returns:         0 if ok, error code otherwise
 **
 *******************************************************************************/
-void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
+INT32 nativeNfcManager_enableDiscovery (INT32 technologies_mask,
     BOOLEAN reader_mode, INT32 enable_host_routing, BOOLEAN restart);
 
 
@@ -86,14 +86,20 @@ void nativeNfcManager_enableDiscovery (INT32 technologies_mask,
 **
 ** Description:     Stop polling and listening for devices.
 **
-** Returns:         None
+** Returns:         0 if ok, error code otherwise
 **
 *******************************************************************************/
-void nativeNfcManager_disableDiscovery ();
+INT32 nativeNfcManager_disableDiscovery ();
 
 void nativeNfcManager_registerTagCallback(nfcTagCallback_t *nfcTagCb);
 
 void nativeNfcManager_deregisterTagCallback();
+
+int nativeNfcManager_selectNextTag();
+
+int nativeNfcManager_checkNextProtocol();
+
+int nativeNfcManager_getNumTags();
 
 void nativeNfcManager_registerHostCallback(nfcHostCardEmulationCallback_t *callback);
 void nativeNfcManager_deregisterHostCallback();

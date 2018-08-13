@@ -710,11 +710,8 @@
 /* Maximum number of AID entries per target_handle  */
 #ifndef NFA_EE_MAX_AID_ENTRIES
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
 #define NFA_EE_MAX_AID_ENTRIES      (50)
-#else
-#define NFA_EE_MAX_AID_ENTRIES      (20)
-#endif
+#define NFA_EE_MAX_AID_ENTRIES_PN547C2      (20)
 #else
 #define NFA_EE_MAX_AID_ENTRIES      (10)
 #endif

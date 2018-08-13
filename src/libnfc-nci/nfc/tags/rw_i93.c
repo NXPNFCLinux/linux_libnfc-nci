@@ -59,7 +59,7 @@
 #define RW_I93_TOUT_STAY_QUIET                  200     /* stay quiet timeout   */
 #define RW_I93_READ_MULTI_BLOCK_SIZE            128     /* max reading data if read multi block is supported */
 #define RW_I93_FORMAT_DATA_LEN                  8       /* CC, zero length NDEF, Terminator TLV              */
-#define RW_I93_GET_MULTI_BLOCK_SEC_SIZE         512     /* max getting lock status if get multi block sec is supported */
+#define RW_I93_GET_MULTI_BLOCK_SEC_SIZE         253     /* max getting lock status if get multi block sec is supported */
 
 /* main state */
 enum

@@ -234,18 +234,31 @@ static NFCSTATUS phTmlNfc_StartThread(void)
     /* Create Reader and Writer threads */
     pthread_create_status = pthread_create(&gpphTmlNfc_Context->readerThread,NULL,(void *)&phTmlNfc_TmlThread,
                                   (void *)h_threadsEvent);
+
     if(0 != pthread_create_status)
     {
         wStartStatus = NFCSTATUS_FAILED;
     }
     else
     {
+        if(pthread_setname_np(gpphTmlNfc_Context->readerThread,"TML_RDR_TASK"))
+        {
+            NXPLOG_NCIHAL_E("pthread_setname_np in %s failed",__FUNCTION__);
+        }
+
         /*Start Writer Thread*/
         pthread_create_status = pthread_create(&gpphTmlNfc_Context->writerThread,NULL,(void *)&phTmlNfc_TmlWriterThread,
                                    (void *)h_threadsEvent);
         if(0 != pthread_create_status)
         {
             wStartStatus = NFCSTATUS_FAILED;
+        }
+        else
+        {
+            if(pthread_setname_np(gpphTmlNfc_Context->writerThread,"TML_WRTR_TASK"))
+            {
+                NXPLOG_NCIHAL_E("pthread_setname_np in %s failed", __FUNCTION__);
+            }
         }
     }
 

@@ -133,10 +133,10 @@ int nfcTag_formatTag(unsigned int handle)
     return ret;
 }
 
-int nfcTag_makeReadOnly(unsigned int handle)
+int nfcTag_makeReadOnly(unsigned int handle, unsigned char *key, unsigned char key_length)
 {
     int ret;
-    ret = nativeNfcTag_doMakeReadonly(handle);
+    ret = nativeNfcTag_doMakeReadonly(handle, key, key_length);
     return ret;
 }
 
@@ -194,6 +194,17 @@ void nfcManager_registerTagCallback(nfcTagCallback_t *callback)
 void nfcManager_deregisterTagCallback()
 {
     nativeNfcManager_deregisterTagCallback();
+}
+
+
+int nfcManager_selectNextTag()
+{
+	return nativeNfcManager_selectNextTag();
+}
+
+int nfcManager_getNumTags(void)
+{
+	return nativeNfcManager_getNumTags();
 }
 
 int nfcManager_getFwVersion ()

@@ -49,6 +49,7 @@
 #include "nci_defs.h"
 #include "nfc_hal_api.h"
 #include "gki.h"
+#include "vendor_cfg.h"
 
 /* NFC application return status codes */
 #define NFC_STATUS_OK                   NCI_STATUS_OK                   /* Command succeeded    */
@@ -76,9 +77,9 @@
 
 #if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
 //DTA API for MW Version need to change according to release
-#define NFC_NXP_MW_VERSION_MAJ          (1U) /* MW Major Version */
-#define NFC_NXP_MW_VERSION_MIN          (0U) /* MW Minor Version */
-#define NFC_NXP_ANDROID_VER             (3U) /* NXP Android Version*/
+#define NFC_NXP_MW_VERSION_MAJ          (2U) /* MW Major Version */
+#define NFC_NXP_MW_VERSION_MIN          (1U) /* MW Minor Version */
+#define NFC_NXP_LINUX_VER               (3U) /* NXP LINUX Version*/
 #endif
 /* 0xE0 ~0xFF are proprietary status codes */
 #define NFC_STATUS_CMD_STARTED          0xE3/* Command started successfully                     */

@@ -48,7 +48,7 @@
 #include "nfc_hal_nv_co.h"
 #include "nfa_nv_ci.h"
 #include "CrcChecksum.h"
-extern char bcm_nfc_location[];
+extern char nfc_nci_store[];
 static const char* sNfaStorageBin = "/nfaStorage.bin";
 
 /*******************************************************************************
@@ -110,7 +110,7 @@ extern void nfa_nv_co_read(UINT8 *pBuffer, UINT16 nbytes, UINT8 block)
 
     memset (filename, 0, sizeof(filename));
     memset (filename2, 0, sizeof(filename2));
-    strcpy(filename2, bcm_nfc_location);
+    strcpy(filename2, nfc_nci_store);
     strncat(filename2, sNfaStorageBin, sizeof(filename2)-strlen(filename2)-1);
     if (strlen(filename2) > 200)
     {
@@ -169,7 +169,7 @@ extern void nfa_nv_co_write(const UINT8 *pBuffer, UINT16 nbytes, UINT8 block)
 
     memset (filename, 0, sizeof(filename));
     memset (filename2, 0, sizeof(filename2));
-    strcpy(filename2, bcm_nfc_location);
+    strcpy(filename2, nfc_nci_store);
     strncat(filename2, sNfaStorageBin, sizeof(filename2)-strlen(filename2)-1);
     if (strlen(filename2) > 200)
     {
@@ -230,7 +230,7 @@ void delete_stack_non_volatile_store (BOOLEAN forceDelete)
 
     memset (filename, 0, sizeof(filename));
     memset (filename2, 0, sizeof(filename2));
-    strcpy(filename2, bcm_nfc_location);
+    strcpy(filename2, nfc_nci_store);
     strncat(filename2, sNfaStorageBin, sizeof(filename2)-strlen(filename2)-1);
     if (strlen(filename2) > 200)
     {
@@ -268,7 +268,7 @@ void verify_stack_non_volatile_store ()
 
     memset (filename, 0, sizeof(filename));
     memset (filename2, 0, sizeof(filename2));
-    strcpy(filename2, bcm_nfc_location);
+    strcpy(filename2, nfc_nci_store);
     strncat(filename2, sNfaStorageBin, sizeof(filename2)-strlen(filename2)-1);
     if (strlen(filename2) > 200)
     {

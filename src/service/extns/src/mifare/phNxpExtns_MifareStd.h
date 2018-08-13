@@ -25,7 +25,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-extern UINT8 current_key[];
+extern uint8_t current_key[];
 /* Enable this macro to set key configuration for mifare classic Tag */
 #define PHLIBNFC_NXPETENSION_CONFIGURE_MFKEYS 1
 
@@ -221,12 +221,12 @@ NFCSTATUS Mfc_WriteNdef(uint8_t *p_data, uint32_t len);
 NFCSTATUS Mfc_CheckNdef(void);
 NFCSTATUS Mfc_ReadNdef(void);
 NFCSTATUS Mfc_FormatNdef(uint8_t *secretkey, uint8_t len);
-NFCSTATUS Mfc_PresenceCheck(void);
 NFCSTATUS Mfc_Transceive(uint8_t *p_data, uint32_t len);
-NFCSTATUS Mfc_SetReadOnly(void);
+NFCSTATUS Mfc_SetReadOnly(uint8_t *secrtkey, uint8_t len);
 void Mfc_DeactivateCbackSelect(void);
 void Mfc_ActivateCback(void);
 NFCSTATUS Mfc_RecvPacket(uint8_t *buff, uint8_t buffSz);
 NFCSTATUS phNxNciExtns_MifareStd_Reconnect(void);
+NFCSTATUS Mfc_PresenceCheck (void);
 
 #endif /* _PHNXPEXTNS_MFCRF_H_ */

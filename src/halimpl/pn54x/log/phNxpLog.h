@@ -44,12 +44,13 @@ extern nci_log_level_t gLog_level;
 #define ENABLE_FWDNLD_TRACES  TRUE
 #define ENABLE_NCIX_TRACES    TRUE
 #define ENABLE_NCIR_TRACES    TRUE
-#define ENABLE_API_TRACES     FALSE
+#define ENABLE_API_TRACES     TRUE
 
 #define ENABLE_HCPX_TRACES    FALSE
 #define ENABLE_HCPR_TRACES    FALSE
 
 /* ####################### Set the log module name in .conf file ########################## */
+#define NAME_NXPLOG_GLOBAL_LOGLEVEL         "NXPLOG_GLOBAL_LOGLEVEL"
 #define NAME_NXPLOG_EXTNS_LOGLEVEL          "NXPLOG_EXTNS_LOGLEVEL"
 #define NAME_NXPLOG_HAL_LOGLEVEL            "NXPLOG_NCIHAL_LOGLEVEL"
 #define NAME_NXPLOG_NCIX_LOGLEVEL           "NXPLOG_NCIX_LOGLEVEL"
@@ -90,6 +91,7 @@ extern const char * NXPLOG_ITEM_HCPR;    /* Android logging tag for NxpHcpR   */
 
 void phNxpLog_InitializeLogLevel(void);
 void phNxpLog_LogMsg (UINT32 trace_set_mask, const char *item, const char *fmt_str, ...);
+void phNxpLog_LogBuffer (UINT32 trace_set_mask, const char * item, unsigned char *buffer, unsigned len);
 
 /* ######################################## Defines used for Logging data ######################################### */
 #ifdef NXP_VRBS_REQ
@@ -104,10 +106,12 @@ void phNxpLog_LogMsg (UINT32 trace_set_mask, const char *item, const char *fmt_s
 /* ################################################################################################################ */
 /* Logging APIs used */
 #if (ENABLE_API_TRACES == TRUE )
-#    define NXPLOG_API_D(...)      phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL,NXPLOG_ITEM_API,__VA_ARGS__)
-#    define NXPLOG_API_E(...)      phNxpLog_LogMsg(NXPLOG_LOG_ERROR_LOGLEVEL,NXPLOG_ITEM_API,__VA_ARGS__)
+#    define NXPLOG_API_D(...)      {if(gLog_level.global_log_level >= NXPLOG_LOG_DEBUG_LOGLEVEL) phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL,NXPLOG_ITEM_API,__VA_ARGS__); }
+#    define NXPLOG_API_W(...)      {if(gLog_level.global_log_level >= NXPLOG_LOG_WARN_LOGLEVEL) phNxpLog_LogMsg(NXPLOG_LOG_WARN_LOGLEVEL,NXPLOG_ITEM_API,__VA_ARGS__); }
+#    define NXPLOG_API_E(...)      {if(gLog_level.global_log_level >= NXPLOG_LOG_ERROR_LOGLEVEL) phNxpLog_LogMsg(NXPLOG_LOG_ERROR_LOGLEVEL,NXPLOG_ITEM_API,__VA_ARGS__); }
 #else
 #    define NXPLOG_API_D(...)
+#    define NXPLOG_API_W(...)
 #    define NXPLOG_API_E(...)
 #endif /* Logging APIs used */
 

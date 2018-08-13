@@ -183,6 +183,7 @@ typedef struct
      *  \brief activated protocol
      */
     tNFC_PROTOCOL protocol;
+
 }nfc_tag_info_t;
 
 /**
@@ -451,7 +452,7 @@ typedef struct {
 * \param ndef_buff_length:  the length of buffer
 * \param out_text:  the buffer to fill text in
 * \param out_text_length:  the length of out_text buffer
-* \return 0 if success, otherwise failed.
+* \return the length of ndef message if success, otherwise -1
 */
 extern int ndef_readText(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_text, unsigned int out_text_length);
 
@@ -461,7 +462,7 @@ extern int ndef_readText(unsigned char *ndef_buff, unsigned int ndef_buff_length
 * \param ndef_buff_length:  the length of buffer
 * \param out_url:  the buffer to fill url in
 * \param out_url_length:  the length of out_url buffer
-* \return 0 if success, otherwise failed.
+* \return the length of ndef message if success, otherwise -1
 */
 extern int ndef_readUrl(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_url, unsigned int out_url_length);
 
@@ -558,11 +559,28 @@ extern int nfcTag_readNdef(unsigned int handle, unsigned char *ndef_buffer,  uns
 extern int nfcTag_writeNdef(unsigned int handle, unsigned char *ndef_buffer, unsigned int ndef_buffer_length);
 
 /**
+* \brief Check if the tag is Ndef formatable.
+* \param handle:  handle to the tag.
+* \return 1 with info if it is Ndef tag Formattable, otherwise 0.
+*
+*/
+extern int nfcTag_isFormatable(unsigned int handle);
+
+/**
+* \brief Format the NDEF Formatable Tag.
+* \param handle:  handle to the tag.
+* \return if success, otherwise failed.
+*
+*/
+extern int nfcTag_formatTag(unsigned int handle);
+
+
+/**
 * \brief Make the tag read-only.
 * \param handle:  handle to the tag.
 * \return 0 if success, otherwise failed.
 */
-extern int nfcTag_makeReadOnly(unsigned int handle);
+extern int nfcTag_makeReadOnly(unsigned int handle, unsigned char *key, unsigned char key_length);
 
 /**
 * \brief Switch RF interface for ISO-DEP and MifareClassic tag.
@@ -583,6 +601,8 @@ extern int nfcTag_switchRF(unsigned int handle, int is_frame_rf);
 * \return the real length of data received or 0 if failed.
 */
 extern int nfcTag_transceive (unsigned int handle, unsigned char *tx_buffer, int tx_buffer_length, unsigned char* rx_buffer, int rx_buffer_length, unsigned int timeout);
+
+
 
 /**
 * \brief initialize nfc stack.
@@ -631,6 +651,18 @@ extern void nfcManager_registerTagCallback(nfcTagCallback_t *callback);
 * \return None
 */
 extern void nfcManager_deregisterTagCallback();
+
+/**
+* \brief Select the next Tag present in the Field.
+* \return 0 if success, otherwise failed.
+*/
+extern int nfcManager_selectNextTag(void);
+
+/**
+* \brief To get the number of Tags Discovered.
+* \return Number of Tags Discovered
+*/
+extern int nfcManager_getNumTags(void);
 
 /**
 * \brief Return FW version.

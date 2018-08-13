@@ -48,6 +48,7 @@
 extern "C" {
 #endif
 
+
 #define NCI_BRCM_CO_ID              0x2E
 
 /* Define the message header size for all NCI Commands and Notifications.
@@ -373,13 +374,9 @@ typedef UINT8 tNCI_STATUS;
 #define NCI_INTERFACE_FIRST_VS          0x80
 #if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
 #define NCI_INTERFACE_MIFARE            0x80
-#if (NFC_NXP_CHIP_TYPE != PN547C2)
+/* #if (NFC_NXP_CHIP_TYPE != PN547C2) */
 #define NCI_INTERFACE_UICC_DIRECT       0x82
 #define NCI_INTERFACE_ESE_DIRECT        0x83
-#else
-#define NCI_INTERFACE_UICC_DIRECT       0x81
-#define NCI_INTERFACE_ESE_DIRECT        0x82
-#endif
 #endif
 typedef UINT8 tNCI_INTF_TYPE;
 
@@ -408,62 +405,6 @@ typedef UINT8 tNCI_INTF_TYPE;
 #if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
 #define NCI_PROTOCOL_ISO7816            0xA0
 #endif
-/**********************************************
- * Proprietary Protocols
- **********************************************/
-#if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#ifndef NCI_PROTOCOL_ISO7816
-#define NCI_PROTOCOL_ISO7816             0xA0
-#endif
-#ifndef NCI_PROTOCOL_MIFARE
-#define NCI_PROTOCOL_MIFARE             0x80
-#endif
-#ifndef NCI_PROTOCOL_18092_ACTIVE
-#define NCI_PROTOCOL_18092_ACTIVE       0x05
-#endif
-#else
-#ifndef NCI_PROTOCOL_MIFARE
-#define NCI_PROTOCOL_MIFARE             0xFF
-#endif
-#ifndef NCI_PROTOCOL_18092_ACTIVE
-#define NCI_PROTOCOL_18092_ACTIVE       0x80
-#endif
-#endif
-
-#ifndef NCI_PROTOCOL_B_PRIME
-#define NCI_PROTOCOL_B_PRIME            0x81
-#endif
-#ifndef NCI_PROTOCOL_DUAL
-#define NCI_PROTOCOL_DUAL               0x82
-#endif
-#if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#ifndef NCI_PROTOCOL_15693
-#define NCI_PROTOCOL_15693              0x06
-#endif
-#else
-#ifndef NCI_PROTOCOL_15693
-#define NCI_PROTOCOL_15693              0x83
-#endif
-#endif
-
-
-#ifndef NCI_PROTOCOL_KOVIO
-#if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-#define NCI_PROTOCOL_KOVIO              0x81
-#else
-#define NCI_PROTOCOL_KOVIO              0x8A
-#endif
-#else
-#define NCI_PROTOCOL_KOVIO              0x8A
-#endif
-#endif
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#ifndef NCI_PROTOCOL_T3BT
-#define NCI_PROTOCOL_T3BT               0x8b
-#endif
-#endif
-
 
 /* Discovery Types/Detected Technology and Mode */
 #define NCI_DISCOVERY_TYPE_POLL_A               0x00
@@ -472,15 +413,6 @@ typedef UINT8 tNCI_INTF_TYPE;
 #define NCI_DISCOVERY_TYPE_POLL_A_ACTIVE        0x03
 #define NCI_DISCOVERY_TYPE_POLL_F_ACTIVE        0x05
 #define NCI_DISCOVERY_TYPE_POLL_B_PRIME         0x74
-#if (NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-#define NCI_DISCOVERY_TYPE_POLL_KOVIO           0x70
-#else
-#define NCI_DISCOVERY_TYPE_POLL_KOVIO           0x77
-#endif
-#else
-#define NCI_DISCOVERY_TYPE_POLL_KOVIO           0x77
-#endif
 #define NCI_DISCOVERY_TYPE_LISTEN_A             0x80
 #define NCI_DISCOVERY_TYPE_LISTEN_B             0x81
 #define NCI_DISCOVERY_TYPE_LISTEN_F             0x82

@@ -45,24 +45,49 @@ AC_CHECK_FUNCS([select])
 AC_CHECK_FUNCS([dlopen])
 
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([libnfc-nci.pc])
 
-AC_ARG_ENABLE([pn7150],
-[  --enable-pn7150    set chip version to PN7150],
-[case "${enableval}" in
-  yes) pn7150=true ;;
-  no)  pn7150=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-pn7150]) ;;
-esac],[pn7150=false])
+test -z "$SED" && SED=sed
 
-AC_ARG_ENABLE([pn7120],
-[  --enable-pn7120    set chip version to PN7120],
-[case "${enableval}" in
-  yes) pn7120=true ;;
-  no)  pn7120=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-pn7120]) ;;
-esac],[pn7120=false])
+AC_ARG_ENABLE([debug],
+  [AS_HELP_STRING([--enable-debug],
+                  [whether to include debug symbols (default is no)])],
+  [enable_debug=$enableval],
+  [enable_debug=no]
+)
 
-AC_ARG_VAR(openssldir, help-string)
+if test "x$enable_debug" = xyes; then
+  dnl Remove all optimization flags from CFLAGS
+  changequote({,})
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-O[0-9s]*//g'`
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-O[0-9s]*//g'`
+  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/-O[0-9s]*//g'`
+
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  changequote([,])
+
+  CFLAGS="$CFLAGS -g -O0"
+ # Can ignore the below flag as either CFLAGS or CXXFLAGS
+ # will be added
+ # CPPFLAGS="$CPPFLAGS -g -O0"
+  CXXFLAGS="$CXXFLAGS -g -O0"
+else
+  changequote({,})
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  changequote([,])
+fi
+
+echo "CFLAGS=$CFLAGS"
+echo "CPPFLAGS=$CPPFLAGS"
+echo "CXXFLAGS=$CXXFLAGS"
+
+AM_CONDITIONAL([DEBUG],   [test x$enable_debug  = xyes])
+
+AC_ARG_VAR(openssldir, openssl installation path)
 
 AC_ARG_ENABLE([llcp1_3],
 [  --enable-llcp1_3    enable LLCP1.3 (secured P2P)],
@@ -115,6 +140,7 @@ AM_CONDITIONAL([LPCUSBSIO], [PKG_CHECK_MODULES([UDEV], [libudev],
    [AC_MSG_NOTICE([libudev present])],
    [AC_MSG_ERROR([libudev not present but required for lpcusbsio configuration. Install it for the given target (for instance using 'apt-get install libudev-dev' command) then run configure again])]
 )])
+AC_CHECK_HEADERS([libudev.h])
 fi
 if [ "$alt" = "true" ]; then
 ((COUNT++))
@@ -124,18 +150,6 @@ if [ "$i2c" = "true" ]; then
 fi
 if [test "$COUNT" -gt 1]; then
 AC_MSG_ERROR(Can not enable multiple tml)
-fi])
-
-AM_CONDITIONAL([CHIP_SEL_NOK], [
-COUNT=0
-if [ "$pn7150" = "true" ]; then
-((COUNT++))
-fi
-if [ "$pn7120" = "true" ]; then
-((COUNT++))
-fi
-if [test "$COUNT" -gt 1]; then
-AC_MSG_ERROR(Can not enable multiple chip type)
 fi])
 
 AM_CONDITIONAL([LLCP1_3_ENABLED], [if [$llcp1_3]; then
@@ -163,14 +177,6 @@ AC_MSG_NOTICE([Selected TML is I2C])
 i2c=true
 fi])
 
-AM_CONDITIONAL([CHIP_SEL_ONE], [if [$pn7150]; then
-AC_MSG_NOTICE([Selected chip type is PN7150])
-elif [$pn7120]; then
-AC_MSG_NOTICE([Selected chip type is PN7120])
-else
-AC_MSG_NOTICE([Selected chip type is PN7120])
-pn7120=true
-fi])
 
 AM_CONDITIONAL([LLCP1_3],   [test x$llcp1_3  = xtrue])
 
@@ -182,8 +188,5 @@ AM_CONDITIONAL([I2C],       [test x$i2c    = xtrue])
 
 AM_CONDITIONAL([ALT],       [test x$alt    = xtrue])
 
-AM_CONDITIONAL([PN7150],    [test x$pn7150 = xtrue])
-
-AM_CONDITIONAL([PN7120],    [test x$pn7120 = xtrue])
 
 AC_OUTPUT

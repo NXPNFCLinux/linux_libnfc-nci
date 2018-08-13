@@ -294,7 +294,7 @@ INT32 nativeNdef_createMime(char *mimeType, UINT8 *mimeData, UINT32 mimeDataLeng
         return 0;
     }
 
-    status = NDEF_MsgAddRec(outNdefBuff, 1024, &current_size, NDEF_TNF_MEDIA, (UINT8 *)mimeType, mimeTypeLength, NULL, 0,
+    status = NDEF_MsgAddRec(outNdefBuff, outBufferLen, &current_size, NDEF_TNF_MEDIA, (UINT8 *)mimeType, mimeTypeLength, NULL, 0,
                                     (UINT8*)mimeData, (UINT32)mimeDataLength);
 
     if (status != NFA_STATUS_OK )
@@ -393,9 +393,12 @@ INT32 nativeNdef_readText( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outText, U
         return -1;
     }
     langCodeLen = payload[0];
+    if (textLen < (payloadLength - langCodeLen - 1))
+    {
+        return -1;
+    }
     memcpy(outText, payload + langCodeLen + 1, payloadLength - langCodeLen - 1);
-    outText[payloadLength - langCodeLen - 1] = '\0';
-    return 0;
+    return (payloadLength - langCodeLen - 1);
 }
 
 INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT32 urlBufferLen)
@@ -430,15 +433,14 @@ INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT
         prefixIdx = payload[0];
     }
     prefixLen = strlen(URI_PREFIX_MAP[prefixIdx]);
-    if (urlBufferLen >= payloadLength + prefixLen)
+    if (urlBufferLen < payloadLength + prefixLen)
     {
-        memcpy(outUrl, URI_PREFIX_MAP[prefixIdx], prefixLen);
-        memcpy(outUrl + prefixLen, payload + 1, payloadLength - 1);
-    
-        outUrl[prefixLen + payloadLength - 1] = '\0';
+        return -1;
     }
-    return 0;
-}
+    memcpy(outUrl, URI_PREFIX_MAP[prefixIdx], prefixLen);
+    memcpy(outUrl + prefixLen, payload + 1, payloadLength - 1);
+    return (payloadLength + prefixLen - 1);
+ }
 
 INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request_t *hrInfo)
 {

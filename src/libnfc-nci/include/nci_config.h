@@ -100,9 +100,7 @@ int GetNumValue(const char* name, void* p_value, unsigned long len);
 #if (NFC_NXP_LLCP_SECURED_P2P == TRUE)
 #define NAME_LLCP_SECURED_P2P_ENABLE    "LLCP_SECURED_P2P_ENABLE"
 #endif
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-#define NAME_NXP_PRFD_TECH_SE            "NXP_PRFD_TECH_SE"
-#endif
+
 #define NAME_SNOOZE_MODE_CFG            "SNOOZE_MODE_CFG"
 #define NAME_NFA_DM_DISC_DURATION_POLL  "NFA_DM_DISC_DURATION_POLL"
 #define NAME_SPD_DEBUG                  "SPD_DEBUG"
@@ -126,9 +124,11 @@ int GetNumValue(const char* name, void* p_value, unsigned long len);
 #define NAME_POWER_OFF_MODE             "POWER_OFF_MODE"
 #define NAME_GLOBAL_RESET               "DO_GLOBAL_RESET"
 #define NAME_NCI_HAL_MODULE             "NCI_HAL_MODULE"
-#if(NFC_NXP_CHIP_TYPE == PN547C2)
+
+/*(NFC_NXP_CHIP_TYPE != PN547C2) */
+#define NAME_NXP_PRFD_TECH_SE            "NXP_PRFD_TECH_SE"
+/* (NFC_NXP_CHIP_TYPE == PN547C2) */
 #define NAME_NXP_CORE_SCRN_OFF_AUTONOMOUS_ENABLE   "NXP_CORE_SCRN_OFF_AUTONOMOUS_ENABLE"
-#endif
 
 #define                     LPTD_PARAM_LEN (40)
 

@@ -94,8 +94,7 @@ void ProtoDispAdapterDisplayNciPacket (UINT8 *nciPacket, UINT16 nciPacketLen, BO
         return;
     char line_buf [(MAX_NCI_PACKET_SIZE*2)+1];
     ToHex (nciPacket, nciPacketLen, line_buf, sizeof(line_buf));
-    //__android_log_write (ANDROID_LOG_DEBUG, (is_recv) ? "BrcmNciR": "BrcmNciX", line_buf);
-    phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, (is_recv) ? "BrcmNciR": "BrcmNciX", line_buf);
+    phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, (is_recv) ? "NfcNciR:": "NfcNciX:", line_buf);
 }
 
 
@@ -121,8 +120,7 @@ void ScrLog (UINT32 trace_set_mask, const char *fmt_str, ...)
     va_start (ap, fmt_str);
     vsnprintf (buffer, BTE_LOG_MAX_SIZE, fmt_str, ap);
     va_end (ap);
-    //__android_log_write(ANDROID_LOG_INFO, "BrcmNci", buffer);
-    phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "BrcmNci:    ", buffer);
+    phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "NfcNci:    ", buffer);
 }
 
 
@@ -236,8 +234,7 @@ inline void byte2hex (const char* data, char** str)
             return;
 
         ToHex (data, data_len, log_line, sizeof(log_line));
-        //__android_log_write (ANDROID_LOG_DEBUG, "BrcmHciX", log_line);
-        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "BrcmHciX", log_line);
+        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "NfcHciX:", log_line);
     }
 
 
@@ -256,7 +253,7 @@ inline void byte2hex (const char* data, char** str)
 
         ToHex (data, data_len, log_line, sizeof(log_line));
         //__android_log_write (ANDROID_LOG_DEBUG, "BrcmHciR", log_line);
-        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "BrcmHciR", log_line);
+        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "NfcHciR:", log_line);
     }
 
 
@@ -283,7 +280,7 @@ inline void byte2hex (const char* data, char** str)
 
         ToHex (data, data_len, log_line, sizeof(log_line));
         //__android_log_write (ANDROID_LOG_DEBUG, (is_recv) ? "BrcmLlcpR": "BrcmLlcpX", log_line);
-        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, (is_recv) ? "BrcmLlcpR": "BrcmLlcpX", log_line);
+        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, (is_recv) ? "NfcLlcpR:": "NfcLlcpX:", log_line);
     }
 
 
@@ -312,7 +309,7 @@ inline void byte2hex (const char* data, char** str)
 
         ToHex (data, len, log_line, sizeof(log_line));
         //__android_log_write (ANDROID_LOG_DEBUG, (is_recv) ? "BrcmHcpR": "BrcmHcpX", log_line);
-        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, (is_recv) ? "BrcmHcpR": "BrcmHcpX", log_line);
+        phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, (is_recv) ? "NfcHcpR:": "NfcHcpX:", log_line);
     }
 
 
@@ -377,7 +374,7 @@ void LogMsg (UINT32 trace_set_mask, const char *fmt_str, ...)
     va_start (ap, fmt_str);
     vsnprintf (buffer, BTE_LOG_MAX_SIZE, fmt_str, ap);
     va_end (ap);
-    NXPLOG_API_D("Brcm: %s\n", buffer);
+    NXPLOG_API_D("Nfc: %s\n", buffer);
     //phNxpLog_LogMsg(NXPLOG_LOG_DEBUG_LOGLEVEL, "Brcm:       ", buffer);
 }
 

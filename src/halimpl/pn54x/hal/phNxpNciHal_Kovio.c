@@ -34,6 +34,8 @@ static uint8_t rf_deactivate_cmd[]   = { 0x21, 0x06, 0x01, 0x03 }; /* discovery 
 static uint8_t rf_deactivated_ntf[]  = { 0x61, 0x06, 0x02, 0x03, 0x01 };
 static uint8_t reset_ntf[] = {0x60, 0x00, 0x06, 0xA0, 0x00, 0xC7, 0xD4, 0x00, 0x00};
 
+static uint8_t kovio_protocol_type=0;
+static uint8_t kovio_discovery_type=0;
 static uint32_t kovio_timer;
 
 /************** Kovio functions ***************************************/
@@ -152,11 +154,7 @@ NFCSTATUS phNxpNciHal_kovio_rsp_ext(uint8_t *p_ntf, uint16_t *p_len)
     send_to_upper_kovio = 1;
     if((p_ntf[0]==0x61)&&(p_ntf[1]==0x05))
     {
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-        if((p_ntf[5]==0x81)&&(p_ntf[6]==0x70))
-#else
-        if((p_ntf[5]==0x8A)&&(p_ntf[6]==0x77))
-#endif
+        if((p_ntf[5] == kovio_protocol_type) && (p_ntf[6] == kovio_discovery_type) )
         {
             if (kovio_detected == 0)
             {
@@ -227,6 +225,8 @@ NFCSTATUS phNxpNciHal_kovio_rsp_ext(uint8_t *p_ntf, uint16_t *p_len)
     }
     return status;
 }
+
+
 /*******************************************************************************
 **
 ** Function         phNxpNciHal_clean_Kovio_Ext

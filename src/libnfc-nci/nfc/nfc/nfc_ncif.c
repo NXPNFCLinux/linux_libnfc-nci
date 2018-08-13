@@ -55,7 +55,7 @@
 #include "rw_api.h"
 #include "rw_int.h"
 #include "hcidefs.h"
-#include "nfc_hal_api.h"
+#include <phNxpNciHal.h>
 
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
 #include "nfa_ce_int.h"
@@ -680,6 +680,7 @@ BOOLEAN nfc_ncif_process_event (BT_HDR *p_msg)
     }
 #endif
 
+    NFC_TRACE_DEBUG1 ("Process Event mt:%d", mt);
     switch (mt)
     {
     case NCI_MT_DATA:
@@ -1038,17 +1039,20 @@ SENSF_RES Response Byte 2 - Byte 17 or 19  n bytes Defined in [DIGPROT] Availabl
         p_i93->dsfid        = *p++;
         STREAM_TO_ARRAY (p_i93->uid, p, NFC_ISO15693_UID_LEN);
         break;
-
-    case NCI_DISCOVERY_TYPE_POLL_KOVIO:
-        p_param->param.pk.uid_len = *p++;
-        if (p_param->param.pk.uid_len > NFC_KOVIO_MAX_LEN)
+    default:
+        if( p_param->mode == NCI_DISCOVERY_TYPE_POLL_KOVIO)
         {
-            NFC_TRACE_ERROR2( "Kovio UID len:0x%x exceeds max(0x%x)", p_param->param.pk.uid_len, NFC_KOVIO_MAX_LEN);
-            p_param->param.pk.uid_len = NFC_KOVIO_MAX_LEN;
-        }
-        STREAM_TO_ARRAY (p_param->param.pk.uid, p, p_param->param.pk.uid_len);
-        break;
+            p_param->param.pk.uid_len = *p++;
+             if (p_param->param.pk.uid_len > NFC_KOVIO_MAX_LEN)
+             {
+                 NFC_TRACE_ERROR2( "Kovio UID len:0x%x exceeds max(0x%x)", p_param->param.pk.uid_len, NFC_KOVIO_MAX_LEN);
+                 p_param->param.pk.uid_len = NFC_KOVIO_MAX_LEN;
+             }
+             STREAM_TO_ARRAY (p_param->param.pk.uid, p, p_param->param.pk.uid_len);
+         }
+    	break;
     }
+
 
     return (p_start + len);
 }
@@ -1135,6 +1139,17 @@ void nfc_ncif_proc_activate (UINT8 *p, UINT8 len)
     UINT8                   *pp, len_act;
     UINT8                   buff_size, num_buff;
     tNFC_RF_PA_PARAMS       *p_pa;
+
+    UINT8 uicc_direct_intf = NCI_INTERFACE_UICC_DIRECT;
+    UINT8 ese_direct_intf = NCI_INTERFACE_ESE_DIRECT;
+
+	if(phNxpNciHal_getChipType() == pn547C2)
+	{
+		/* RU: Decrement the Direct interface Values for the PN547
+		 *  */
+		uicc_direct_intf--;
+		ese_direct_intf--;
+	}
 
     nfc_set_state (NFC_STATE_OPEN);
 
@@ -1339,7 +1354,7 @@ void nfc_ncif_proc_activate (UINT8 *p, UINT8 len)
      * 1. Do not activate tag for this NTF.
      * 2. Pass this info to JNI as START_READER_EVT.
      */
-    else if (evt_data.activate.intf_param.type == NCI_INTERFACE_UICC_DIRECT || evt_data.activate.intf_param.type == NCI_INTERFACE_ESE_DIRECT)
+    else if (evt_data.activate.intf_param.type == uicc_direct_intf || evt_data.activate.intf_param.type == ese_direct_intf)
     {
         NFC_TRACE_DEBUG1("nfc_ncif_proc_activate:interface type  %x", evt_data.activate.intf_param.type);
     }

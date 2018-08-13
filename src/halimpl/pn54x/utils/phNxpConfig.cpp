@@ -49,21 +49,20 @@
 #if GENERIC_TARGET
 const char alternative_config_path[] = "/data/nfc/";
 #else
-const char alternative_config_path[] = "";
+const char alternative_config_path[] = "/usr/local/etc/";
 #endif
 
-#if 1
 const char transport_config_path[] = "/etc/";
-#else
-const char transport_config_path[] = "res/";
-#endif
 
-#define config_name             "libnfc-nxp.conf"
-#define extra_config_base       "libnfc-nxp-"
-#define extra_config_ext        ".conf"
-#define     IsStringValue       0x80000000
+//#define config_name             "libnfc-nxp.conf"
+#define config_base       "libnfc-nxp-"
+#define config_ext        ".conf"
+#define config_init       "init"
+#define config_pn547      "pn547"
+#define config_pn548      "pn548"
+#define IsStringValue       0x80000000
 
-const char config_timestamp_path[] = "/data/nfc/libnfc-nxpConfigState.bin";
+const char config_timestamp_path[] = "/usr/local/etc/libnfc-nxp-stamp-h1";
 
 using namespace::std;
 
@@ -85,8 +84,14 @@ private:
 class CNxpNfcConfig : public vector<const CNxpNfcParam*>
 {
 public:
+    enum{
+        NXP_CFG_INIT  = NXP_CONFIG_TYPE_INIT,
+		NXP_CFG_PN547 = NXP_CONFIG_TYPE_PN547,
+		NXP_CFG_PN548 = NXP_CONFIG_TYPE_PN548,
+		NXP_CFG_UNKNOWN
+    };
     virtual ~CNxpNfcConfig();
-    static CNxpNfcConfig& GetInstance();
+    static CNxpNfcConfig& GetInstance(unsigned long type = NXP_CFG_INIT);
     friend void readOptionalConfig(const char* optional);
     int updateTimestamp();
     int checkTimestamp();
@@ -436,26 +441,93 @@ CNxpNfcConfig::~CNxpNfcConfig()
 ** Returns:     none
 **
 *******************************************************************************/
-CNxpNfcConfig& CNxpNfcConfig::GetInstance()
+CNxpNfcConfig& CNxpNfcConfig::GetInstance(unsigned long cfgtype)
 {
     static CNxpNfcConfig theInstance;
+    static unsigned long current_cfg = NXP_CFG_UNKNOWN;
+    static bool hw_cfg_loaded=false;
+    bool load_cfg=false, reset_cfg = true;
+    bool hw_cfg=false;
+    string strPath;
+    string cfg_name;
+
+    current_cfg = cfgtype;
+
+    cfg_name.assign(config_base);
+
+    switch(current_cfg)
+    {
+        case NXP_CFG_PN547:
+        {
+            cfg_name += config_pn547;
+            hw_cfg = true;
+            break;
+        }
+        case NXP_CFG_PN548:
+        {
+            cfg_name += config_pn548;
+            hw_cfg = true;
+            break;
+        }
+        case NXP_CFG_INIT:
+        default:
+        {
+            current_cfg = NXP_CFG_INIT;
+            cfg_name += config_init;
+            break;
+        }
+    }
+
+    cfg_name += config_ext;
 
     if (theInstance.size() == 0 && theInstance.mValidFile)
     {
-        string strPath;
+        load_cfg = true;
+        hw_cfg_loaded = false;
+        reset_cfg = true;
+    }
+    else if (true == hw_cfg_loaded)
+    {
+        ; /* Do Nothing */
+    }
+    else if (true == hw_cfg)
+    {
+        load_cfg = true;
+        reset_cfg = false;
+    }
+
+    if (true == load_cfg)
+    {
+        int cfg_file_stat = -1;
+
         if (alternative_config_path[0] != '\0')
         {
+            struct stat st;
+
             strPath.assign(alternative_config_path);
-            strPath += config_name;
-            theInstance.readConfig(strPath.c_str(), true);
-            if (!theInstance.empty())
-            {
-                return theInstance;
-            }
+            strPath += cfg_name;
+            cfg_file_stat = stat(strPath.c_str(), &st);
         }
-        strPath.assign(transport_config_path);
-        strPath += config_name;
-        theInstance.readConfig(strPath.c_str(), true);
+
+        if( cfg_file_stat == -1 )
+        {
+            strPath.assign(transport_config_path);
+            strPath += cfg_name;
+        }
+
+#if (NFC_CFG_DEBUG == 0x01)
+            /* Since the config file is loaded before reading the configuration,
+             * using the log macro may not print the below debug message, hence
+             * fprintf used */
+        fprintf(stderr, "%s: Reading Config File: %s...\n", __FUNCTION__, strPath.c_str());
+#endif
+        theInstance.readConfig(strPath.c_str(), reset_cfg);
+
+        if ((!theInstance.empty())
+               && (true == hw_cfg))
+        {
+            hw_cfg_loaded = true;
+        }
     }
 
     return theInstance;
@@ -726,8 +798,7 @@ int CNfcConfig::checkTimestamp()
     }
     return ret;
 }
-
-#endif
+#else
 /*******************************************************************************
 **
 ** Function:    CNxpNfcConfig::checkforTimestamp()
@@ -762,6 +833,8 @@ int CNxpNfcConfig::checkTimestamp()
     }
     return ret;
 }
+
+#endif
 
 /*******************************************************************************
 **
@@ -878,8 +951,9 @@ CNxpNfcParam::CNxpNfcParam(const char* name,  unsigned long value) :
 extern "C" int GetNxpStrValue(const char* name, char* pValue, unsigned long len)
 {
     CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance();
-
-    return rConfig.getValue(name, pValue, len);
+    bool val_status = rConfig.getValue(name, pValue, len);
+    NXPLOG_EXTNS_D("%s: NXP Config Parameter : %s=%s\n", __FUNCTION__, name, pValue);
+    return val_status;
 }
 
 /*******************************************************************************
@@ -901,8 +975,9 @@ extern "C" int GetNxpStrValue(const char* name, char* pValue, unsigned long len)
 extern "C" int GetNxpByteArrayValue(const char* name, char* pValue,long bufflen, long *len)
 {
     CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance();
-
-    return rConfig.getValue(name, pValue, bufflen,len);
+    bool val_status = rConfig.getValue(name, pValue, bufflen,len);
+    NXPLOG_EXTNS_D("%s: NXP Config Parameter : %s\n", __FUNCTION__, name);
+    return val_status;
 }
 
 /*******************************************************************************
@@ -934,6 +1009,9 @@ extern "C" int GetNxpNumValue(const char* name, void* pValue, unsigned long len)
             v += *p++;
         }
     }
+
+    NXPLOG_EXTNS_D("%s: NXP Config Parameter : %s=(0x%x)\n", __FUNCTION__, name, v);
+
     switch (len)
     {
     case sizeof(unsigned long):
@@ -1031,8 +1109,8 @@ extern "C" int updateNxpConfigTimestamp()
 ** Returns:     1 if exists, 0 otherwise.
 **
 *******************************************************************************/
-extern "C" int isNxpConfigValid()
+extern "C" int isNxpConfigValid(unsigned long type)
 {
-    CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance();
+    CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance(type);
     return (rConfig.size() != 0);
 }

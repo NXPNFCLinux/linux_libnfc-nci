@@ -41,13 +41,15 @@
 #include <string>
 #include <vector>
 #include <list>
+#include "phNxpLog.h"
 
 #define LOG_TAG "NfcAdaptation"
 
+const char alternative_config_path[] = "/usr/local/etc/";
 const char transport_config_path[] = "/etc/";
 
-#define config_name             "libnfc-brcm.conf"
-#define extra_config_base       "libnfc-brcm-"
+#define config_name             "libnfc-nci.conf"
+#define extra_config_base       "libnfc-nci-"
 #define extra_config_ext        ".conf"
 #define     IsStringValue       0x80000000
 
@@ -410,13 +412,34 @@ CNfcConfig::~CNfcConfig()
 CNfcConfig& CNfcConfig::GetInstance()
 {
     static CNfcConfig theInstance;
+    string strPath;
+    string cfg_name;
+
+    cfg_name.assign(config_name);
 
     if (theInstance.size() == 0 && theInstance.mValidFile)
     {
-        string strPath;
-        strPath.assign(transport_config_path);
-        strPath += config_name;
-        theInstance.readConfig(strPath.c_str(), true);
+        if (alternative_config_path[0] != '\0')
+        {
+            strPath.assign(alternative_config_path);
+            strPath += cfg_name;
+#if (NFC_CFG_DEBUG == 0x01)
+            /* Since the config file is loaded before reading the configuration,
+             * using the log macro may not print the below debug message, hence
+             * fprintf used */
+            fprintf(stderr, "%s: Reading Config File: %s...\n", __FUNCTION__, strPath.c_str());
+#endif
+            theInstance.readConfig(strPath.c_str(), true);
+        }
+        if (theInstance.empty())
+        {
+            strPath.assign(transport_config_path);
+            strPath += cfg_name;
+#if (NFC_CFG_DEBUG == 0x01)
+            fprintf(stderr, "%s: Reading Config File: %s...\n", __FUNCTION__, strPath.c_str());
+#endif
+            theInstance.readConfig(strPath.c_str(), true);
+        }
     }
 
     return theInstance;
@@ -687,7 +710,9 @@ extern "C" int GetStrValue(const char* name, char* pValue, unsigned long l)
     CNfcConfig& rConfig = CNfcConfig::GetInstance();
 
     bool b = rConfig.getValue(name, pValue, len);
-    return b ? len : 0;
+    //printf("%s: NCI Config Parameter : %s=%s\n", __FUNCTION__, name, pValue);
+
+   return b ? len : 0;
 }
 
 /*******************************************************************************
@@ -719,6 +744,13 @@ extern "C" int GetNumValue(const char* name, void* pValue, unsigned long len)
             v += *p++;
         }
     }
+
+    if(strcmp(name,"NXP_FWD_FUNCTIONALITY_ENABLE") &&
+           strcmp(name,"HOST_LISTEN_ENABLE"))
+    {
+//      printf("%s: NCI Config Parameter :%s = (0x%x)\n", __FUNCTION__, name, v);
+    }
+
     switch (len)
     {
     case sizeof(unsigned long):

@@ -16,7 +16,6 @@
 #ifndef _PHNXPNCIHAL_DNLD_H_
 #define _PHNXPNCIHAL_DNLD_H_
 
-#include <phNfcTypes.h>
 #include <phNfcStatus.h>
 
 NFCSTATUS phNxpNciHal_fw_download_seq(uint8_t bClkSrcVal, uint8_t bClkFreqVal);

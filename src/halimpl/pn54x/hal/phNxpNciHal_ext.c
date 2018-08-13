@@ -207,12 +207,25 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
         case 0x80:
             NXPLOG_NCIHAL_D("NxpNci: Protocol = MIFARE");
             break;
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
         case 0x81:
-#else
+            if (phNxpNciHal_getChipType() != pn547C2)
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Mode = Kovio");
+            }
+            else
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Protocol = Unknown");
+            }
+            break;
         case 0x8A:
-#endif
-            NXPLOG_NCIHAL_D("NxpNci: Protocol = Kovio");
+            if (phNxpNciHal_getChipType()  == pn547C2)
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Mode = Kovio");
+            }
+            else
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Protocol = Unknown");
+            }
             break;
         default:
             NXPLOG_NCIHAL_D("NxpNci: Protocol = Unknown");
@@ -239,12 +252,25 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
         case 0x06:
             NXPLOG_NCIHAL_D("NxpNci: Mode = 15693 Passive Poll");
             break;
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
         case 0x70:
-#else
+            if (phNxpNciHal_getChipType() != pn547C2)
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Mode = Kovio");
+            }
+            else
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Protocol = Unknown");
+            }
+            break;
         case 0x77:
-#endif
-            NXPLOG_NCIHAL_D("NxpNci: Mode = Kovio");
+            if (phNxpNciHal_getChipType() == pn547C2)
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Mode = Kovio");
+            }
+            else
+            {
+                NXPLOG_NCIHAL_D("NxpNci: Protocol = Unknown");
+            }
             break;
         case 0x80:
             NXPLOG_NCIHAL_D("NxpNci: Mode = A Passive Listen");
@@ -316,6 +342,7 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
         icode_detected = 0;
         icode_send_eof = 0;
     }
+#if 0 /* artf551669/artf551636 */
     else if(*p_len == 4 &&
                 p_ntf[0] == 0x40 &&
                 p_ntf[1] == 0x02 &&
@@ -330,6 +357,7 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
         p_ntf[4] = 0x00;
         *p_len = 5;
     }
+#endif
     else if ((p_ntf[0] == 0x40) && (p_ntf[1] == 0x01))
     {
         int len = p_ntf[2] + 2; /*include 2 byte header*/
@@ -339,6 +367,11 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
         iCoreInitRspLen = *p_len;
         memcpy(bCoreInitRsp, p_ntf, *p_len);
         NXPLOG_NCIHAL_D ("NxpNci> FW Version: %x.%x.%x", p_ntf[len-2], p_ntf[len-1], p_ntf[len]);
+        if(phNxpNciHal_deriveChipType(bCoreInitRsp, iCoreInitRspLen) == pnInvalid)
+        {
+            status = NFCSTATUS_FAILED;
+            NXPLOG_NCIHAL_E ("NxpNci> Invalid NFC Chip");
+        }
     }
     //4200 02 00 01
     else if(p_ntf[0] == 0x42 && p_ntf[1] == 0x00 && ee_disc_done == 0x01)
@@ -385,10 +418,10 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
         NXPLOG_NCIHAL_E("CORE_RESET_NTF received!");
         phNxpNciHal_emergency_recovery();
     }
-#if(NFC_NXP_CHIP_TYPE == PN547C2)
     else if(p_ntf[0] == 0x61 && p_ntf[1] == 0x05
             && p_ntf[4] == 0x02 && p_ntf[5] == 0x80
-            && p_ntf[6] == 0x00 )
+            && p_ntf[6] == 0x00
+            && (phNxpNciHal_getChipType() == pn547C2))
     {
         NXPLOG_NCIHAL_D("Going through workaround - iso-dep  interface  mifare protocol with sak value not equal to 0x20");
         rf_technology_length_param = p_ntf[9];
@@ -397,7 +430,6 @@ NFCSTATUS phNxpNciHal_process_ext_rsp (uint8_t *p_ntf, uint16_t *p_len)
             p_ntf[4] = 0x80;
         }
     }
-#endif
     /*
     else if(p_ntf[0] == 0x61 && p_ntf[1] == 0x05 && p_ntf[4] == 0x01 && p_ntf[5] == 0x00 && p_ntf[6] == 0x01)
     {
@@ -514,9 +546,6 @@ NFCSTATUS phNxpNciHal_write_ext(uint16_t *cmd_len, uint8_t *p_cmd_data,
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
 
-    unsigned long retval = 0;
-    int isfound =  GetNxpNumValue(NAME_MIFARE_READER_ENABLE, &retval, sizeof(unsigned long));
-
     phNxpNciHal_NfcDep_cmd_ext(p_cmd_data, cmd_len);
 
     if(phNxpDta_IsEnable() == TRUE)
@@ -598,41 +627,48 @@ NFCSTATUS phNxpNciHal_write_ext(uint16_t *cmd_len, uint8_t *p_cmd_data,
             *cmd_len = 8;
         }
     }
-#if(NFC_NXP_CHIP_TYPE == PN547C2)
-    if (retval == 0x01 &&
-        p_cmd_data[0] == 0x21 &&
-        p_cmd_data[1] == 0x00)
+    if ( p_cmd_data[0] == 0x21 &&
+        p_cmd_data[1] == 0x00
+        && (phNxpNciHal_getChipType() == pn547C2))
     {
-        NXPLOG_NCIHAL_D ("Going through extns - Adding Mifare in RF Discovery");
-        p_cmd_data[2] += 3;
-        p_cmd_data[3] += 1;
-        p_cmd_data[*cmd_len] = 0x80;
-        p_cmd_data[*cmd_len + 1] = 0x01;
-        p_cmd_data[*cmd_len + 2] = 0x80;
-        *cmd_len += 3;
-        status = NFCSTATUS_SUCCESS;
-        NXPLOG_NCIHAL_D ("Going through extns - Adding Mifare in RF Discovery - END");
+        unsigned long retval = 0;
+        int isfound =  GetNxpNumValue(NAME_MIFARE_READER_ENABLE, &retval, sizeof(unsigned long));
+
+        if(retval == 0x01)
+        {
+            NXPLOG_NCIHAL_D ("Going through extns - Adding Mifare in RF Discovery");
+            p_cmd_data[2] += 3;
+            p_cmd_data[3] += 1;
+            p_cmd_data[*cmd_len] = 0x80;
+            p_cmd_data[*cmd_len + 1] = 0x01;
+            p_cmd_data[*cmd_len + 2] = 0x80;
+            *cmd_len += 3;
+            status = NFCSTATUS_SUCCESS;
+            NXPLOG_NCIHAL_D ("Going through extns - Adding Mifare in RF Discovery - END");
+        }
     }
     else
-#endif
     if (p_cmd_data[3] == 0x81 &&
             p_cmd_data[4] == 0x01 &&
             p_cmd_data[5] == 0x03)
     {
         NXPLOG_NCIHAL_D("> Going through workaround - set host list");
 
-#if(NFC_NXP_CHIP_TYPE != PN547C2)
-        *cmd_len = 8;
+        if( (phNxpNciHal_getChipType() != pn547C2))
+        {
+            *cmd_len = 8;
 
-        p_cmd_data[2] = 0x05;
-        p_cmd_data[6] = 0x02;
-        p_cmd_data[7] = 0xC0;
-#else
-        *cmd_len = 7;
+            p_cmd_data[2] = 0x05;
+            p_cmd_data[6] = 0x02;
+            p_cmd_data[7] = 0xC0;
+        }
+        else
+        {
+            *cmd_len = 7;
 
-        p_cmd_data[2] = 0x04;
-        p_cmd_data[6] = 0xC0;
-#endif
+            p_cmd_data[2] = 0x04;
+            p_cmd_data[6] = 0xC0;
+        }
 
         NXPLOG_NCIHAL_D("> Going through workaround - set host list - END");
         status = NFCSTATUS_SUCCESS;
@@ -869,4 +905,3 @@ static void hal_extns_write_rsp_timeout_cb(uint32_t timerId, void *pContext)
 
     return;
 }
-
