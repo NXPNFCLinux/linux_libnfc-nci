@@ -1746,7 +1746,7 @@ INT32 nativeNfcManager_disableDiscovery ()
         stopPolling_rfDiscoveryDisabled();
     }
     sDiscoveryEnabled = false;
-
+    sReaderModeEnabled = false;
     enableP2pListening (false);
 
     // We may have had RF field notifications that did not cause
