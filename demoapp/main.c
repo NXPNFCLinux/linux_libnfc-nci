@@ -809,7 +809,7 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
             {
                 TextContent = malloc(res * sizeof(char));
                 res = ndef_readText(NDEFContent, res, TextContent, res);
-                if(0x00 == res)
+                if(0x00 <= res)
                 {
                     printf("\t\t\t\tType :                 'Text'\n");
                     printf("\t\t\t\tText :                 '%s'\n\n", TextContent);
@@ -830,7 +830,7 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
                 URLContent = malloc(res * sizeof(unsigned char) + 27 );
                 memset(URLContent, 0x00, res * sizeof(unsigned char) + 27);
                 res = ndef_readUrl(NDEFContent, res, URLContent, res + 27);
-                if(0x00 == res)
+                if(0x00 <= res)
                 {
                     printf("                Type :                 'URI'\n");
                     printf("                URI :                 '%s'\n\n", URLContent);
@@ -850,7 +850,7 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
             case NDEF_FRIENDLY_TYPE_HS:
             {
                 res = ndef_readHandoverSelectInfo(NDEFContent, res, &HandoverSelectContent);
-                if(0x00 == res)
+                if(0x00 <= res)
                 {
                     printf("\n\t\tHandover Select : \n");
                     
@@ -972,7 +972,7 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
             case NDEF_FRIENDLY_TYPE_HR:
             {
                 res = ndef_readHandoverRequestInfo(NDEFContent, res, &HandoverRequestContent);
-                if(0x00 == res)
+                if(0x00 <= res)
                 {
                     printf("\n\t\tHandover Request : \n");
                     printf("\t\tBluetooth : \n\t\t\t\tPower state : ");
