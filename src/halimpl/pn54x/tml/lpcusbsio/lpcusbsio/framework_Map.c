@@ -181,6 +181,8 @@ STATUS map_getAll(void* map, void ** elements, int * lenght)
 		}
 	    }
 	}
+
+	return lStatus;
 }
 
 STATUS map_remove(void* map, void* id)
