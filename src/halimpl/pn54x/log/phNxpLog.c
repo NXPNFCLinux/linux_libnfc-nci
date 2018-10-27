@@ -50,7 +50,7 @@ nci_log_level_t gLog_level;
  *nfc.nxp_log_level_global.
  *                  If value can be overridden by module log level.
  *
- * Returns          The value of global log level
+ * Returns          void
  *
  ******************************************************************************/
 static void phNxpLog_SetGlobalLogLevel(void) {
@@ -61,8 +61,6 @@ static void phNxpLog_SetGlobalLogLevel(void) {
     {
         gLog_level.global_log_level = (level > (unsigned char) num) ? level : (unsigned char) num;;
     }
-
-  return level;
 }
 /*******************************************************************************
  *
