@@ -115,6 +115,7 @@ UINT8 nfa_ee_ce_route_strict_disable = 0x01;
 
 static void nfa_ee_report_discover_req_evt(void);
 static void nfa_ee_build_discover_req_evt (tNFA_EE_DISCOVER_REQ *p_evt_data);
+void find_and_resolve_tech_conflict();
 /*******************************************************************************
 **
 ** Function         nfa_ee_trace_aid

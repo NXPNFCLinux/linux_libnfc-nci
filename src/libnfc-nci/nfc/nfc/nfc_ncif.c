@@ -83,6 +83,7 @@ BOOLEAN core_reset_init_num_buff = FALSE;
 UINT8 nfcc_dh_conn_id;
 #endif
 extern etsi_reader_in_progress;
+void disc_deact_ntf_timeout_handler(tNFC_RESPONSE_EVT event);
 /*******************************************************************************
 **
 ** Function         nfc_ncif_update_window
