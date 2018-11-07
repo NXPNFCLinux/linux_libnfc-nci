@@ -142,7 +142,7 @@ void framework_LockMutex(void * mutexHandle)
 	int res = pthread_mutex_lock(mutex->lock);
 	if (res)
 	{
-		printf("lock() failed errno %i\n",strerror (errno));
+		printf("lock() failed %s\n",strerror (errno));
 	}
 }
 
