@@ -56,6 +56,8 @@ public:
     void disableRoutingToHost();
     void registerHostCallback(nfcHostCardEmulationCallback_t *callback);
     void deregisterHostCallback();
+    int registerT3tIdentifier(UINT8* t3tId, UINT8 t3tIdLen);
+    void deregisterT3tIdentifier();
 
 private:
     RoutingManager();
@@ -63,11 +65,12 @@ private:
 
     void handleData (const UINT8* data, UINT32 dataLen, tNFA_STATUS status);
     bool commitRouting();
-    void notifyHceActivated();
+    void notifyHceActivated(UINT8 mode);
     void notifyHceDeactivated();
 
     static void nfaEeCallback (tNFA_EE_EVT event, tNFA_EE_CBACK_DATA* eventData);
     static void stackCallback (UINT8 event, tNFA_CONN_EVT_DATA* eventData);
+    static void nfcFCeCallback (UINT8 event, tNFA_CONN_EVT_DATA* eventData);
     static const int ROUTE_HOST = 0;
 
     UINT8* mRxDataBuffer;
@@ -82,5 +85,6 @@ private:
     int mFwdFuntnEnable;
     bool mSkipCheckNDEF;
     nfcHostCardEmulationCallback_t *mCallback;
+    int mNfcFOnDhHandle;    
 };
 

@@ -1692,6 +1692,7 @@ INT32 nativeNfcManager_enableDiscovery (INT32 technologies_mask,
         enableP2pListening (true);
     }
     // Actually start discovery.
+    usleep(100*1000);
     startRfDiscovery (TRUE);
     sDiscoveryEnabled = true;
 
@@ -1992,3 +1993,18 @@ tNFA_STATUS GetCbStatus(void)
 {
     return gnxpfeature_conf.wstatus;
 }
+
+void nfcManager_registerT3tIdentifier(UINT8 *t3tId, UINT8 t3tIdsize)
+{
+    NXPLOG_API_D ("%s: enter", __FUNCTION__);
+    RoutingManager::getInstance().registerT3tIdentifier(t3tId, t3tIdsize);
+    NXPLOG_API_D ("%s: exit", __FUNCTION__);
+}
+
+void nfcManager_doDeregisterT3tIdentifier(void)
+{
+    NXPLOG_API_D ("%s: enter", __FUNCTION__);
+    RoutingManager::getInstance().deregisterT3tIdentifier();
+    NXPLOG_API_D ("%s: exit", __FUNCTION__);
+}
+

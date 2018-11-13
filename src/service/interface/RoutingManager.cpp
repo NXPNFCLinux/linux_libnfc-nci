@@ -60,6 +60,8 @@ static unsigned char T4T_CHECK_NDEF_APDU[] = {
 
 extern Mutex gSyncMutex;
 extern void checkforTranscation(UINT8 connEvent, void* eventData);
+extern void startRfDiscovery(BOOLEAN isStart);
+extern bool isDiscoveryStarted();
 
 RoutingManager::RoutingManager ()
 : mRxDataBufferLen(0),
@@ -98,10 +100,10 @@ bool RoutingManager::initialize ()
         NXPLOG_API_E ("%s:NXP_FWD_FUNCTIONALITY_ENABLE=%d;", __FUNCTION__, mFwdFuntnEnable);
     }
 
-    if ((GetNumValue(NAME_HOST_LISTEN_ENABLE, &tech, sizeof(tech))))
+    if ((GetNumValue(NAME_HOST_LISTEN_TECH_MASK, &tech, sizeof(tech))))
     {
         mHostListnEnable = tech;
-        NXPLOG_API_E ("%s:HOST_LISTEN_ENABLE=%d;", __FUNCTION__, mHostListnEnable);
+        NXPLOG_API_E ("%s:HOST_LISTEN_TECH_MASK=%d;", __FUNCTION__, mHostListnEnable);
     }
 
     tNFA_STATUS nfaStat;
@@ -181,7 +183,18 @@ void RoutingManager::enableRoutingToHost(bool skipCheckNDEF)
                 NXPLOG_API_E ("Fail to set  iso7816 routing");
             }
         }
-    }
+ 
+        // Route Nfc-F to host if we don't have a SE
+        nfaStat = NFA_EeSetDefaultTechRouting (mDefaultEe, NFA_TECHNOLOGY_MASK_F, 0, 0,0,0);
+        if (nfaStat == NFA_STATUS_OK)
+        {
+            mRoutingEvent.wait ();
+        }
+        else
+        {
+            NXPLOG_API_E ("Fail to set default tech routing for Nfc-F");
+        }
+     }
     commitRouting();
 }
 
@@ -224,13 +237,13 @@ void RoutingManager::deregisterHostCallback()
     mCallback = NULL;
 }
 
-void RoutingManager::notifyHceActivated()
+void RoutingManager::notifyHceActivated(UINT8 mode)
 {
     if (nativeNfcManager_isNfcActive())
     {
         if (mCallback && (NULL != mCallback->onHostCardEmulationActivated))
         {
-            mCallback->onHostCardEmulationActivated();
+            mCallback->onHostCardEmulationActivated(mode);
         }
     }
 }
@@ -322,7 +335,7 @@ void RoutingManager::stackCallback (UINT8 event, tNFA_CONN_EVT_DATA* eventData)
     case NFA_CE_ACTIVATED_EVT:
         {
             checkforTranscation(NFA_CE_ACTIVATED_EVT, (void *)eventData);
-            getInstance().notifyHceActivated();
+            getInstance().notifyHceActivated(((tNFA_CONN_EVT_DATA *)eventData)->ce_activated.activate_ntf.data_mode);
         }
         break;
     case NFA_DEACTIVATED_EVT:
@@ -503,4 +516,118 @@ void RoutingManager::nfaEeCallback (tNFA_EE_EVT event, tNFA_EE_CBACK_DATA* event
         break;
     }
 }
+
+int RoutingManager::registerT3tIdentifier(UINT8* t3tId, UINT8 t3tIdLen)
+{
+    NXPLOG_API_D ("%s: Start to register NFC-F system on DH", __func__);
+
+    if (t3tIdLen != (2 + NCI_RF_F_UID_LEN))
+    {
+        NXPLOG_API_E ("%s: Invalid length of T3T Identifier", __func__);
+        return NFA_HANDLE_INVALID;
+    }
+
+    if (isDiscoveryStarted()) {
+        // Stop RF discovery to reconfigure
+        startRfDiscovery(false);
+    }
+
+    SyncEventGuard guard (mRoutingEvent);
+    mNfcFOnDhHandle = NFA_HANDLE_INVALID;
+
+    int systemCode;
+    UINT8 nfcid2[NCI_RF_F_UID_LEN];
+
+    systemCode = (((int)t3tId[0] << 8) | ((int)t3tId[1] << 0));
+    memcpy(nfcid2, t3tId + 2, NCI_RF_F_UID_LEN);
+
+    tNFA_STATUS nfaStat = NFA_CeRegisterFelicaSystemCodeOnDH (systemCode, nfcid2, nfcFCeCallback);
+    if (nfaStat == NFA_STATUS_OK)
+    {
+        mRoutingEvent.wait ();
+    }
+    else
+    {
+        NXPLOG_API_E ("%s: Fail to register NFC-F system on DH", __func__);
+        return NFA_HANDLE_INVALID;
+    }
+
+    NXPLOG_API_D ("%s: Succeed to register NFC-F system on DH", __func__);
+
+    return mNfcFOnDhHandle;
+}
+
+void RoutingManager::deregisterT3tIdentifier()
+{
+    NXPLOG_API_D ("%s: Start to deregister NFC-F system on DH", __func__);
+
+    if (isDiscoveryStarted()) {
+        // Stop RF discovery to reconfigure
+        startRfDiscovery(false);
+    }
+
+    SyncEventGuard guard (mRoutingEvent);
+    tNFA_STATUS nfaStat = NFA_CeDeregisterFelicaSystemCodeOnDH (mNfcFOnDhHandle);
+    if (nfaStat == NFA_STATUS_OK)
+    {
+        mRoutingEvent.wait ();
+        NXPLOG_API_D ("%s: Succeeded in deregistering NFC-F system on DH", __func__);
+    }
+    else
+    {
+        NXPLOG_API_E ("%s: Fail to deregister NFC-F system on DH", __func__);
+    }
+
+}
+
+void RoutingManager::nfcFCeCallback (UINT8 event, tNFA_CONN_EVT_DATA* eventData)
+{
+    NXPLOG_API_D("%s: 0x%x", __func__, event);
+
+    RoutingManager& routingManager = RoutingManager::getInstance();
+
+    switch (event)
+    {
+    case NFA_CE_REGISTERED_EVT:
+        {
+            SyncEventGuard guard (routingManager.mRoutingEvent);
+            NXPLOG_API_D("%s: NFA_CE_REGISTERED_EVT; status=0x%X; h=0x%X", __func__,
+                         eventData->ce_registered.status,
+                         eventData->ce_registered.handle);
+            routingManager.mRoutingEvent.notifyOne();
+        }
+        break;
+    case NFA_CE_DEREGISTERED_EVT:
+        {
+            SyncEventGuard guard (routingManager.mRoutingEvent);
+            NXPLOG_API_D("%s: NFA_CE_DEREGISTERED_EVT; h=0x%X", __func__, eventData->ce_deregistered.handle);
+            routingManager.mRoutingEvent.notifyOne();        }
+        break;
+   case NFA_CE_ACTIVATED_EVT:
+        {
+            NXPLOG_API_D ("%s: activated event notified", __func__);
+            getInstance().notifyHceActivated(((tNFA_CONN_EVT_DATA *)eventData)->ce_activated.activate_ntf.data_mode);
+        }
+        break;
+    case NFA_CE_DEACTIVATED_EVT:
+        {
+            NXPLOG_API_D ("%s: deactivated event notified", __func__);
+            getInstance().notifyHceDeactivated();
+        }
+        break;
+    case NFA_CE_DATA_EVT:
+        {
+            NXPLOG_API_D ("%s: data event notified", __func__);
+            tNFA_CE_DATA& ce_data = eventData->ce_data;
+            getInstance().handleData(ce_data.p_data, ce_data.len, ce_data.status);
+        }
+        break;
+    default:
+        {
+            NXPLOG_API_E ("%s: unknown event=%u ????", __func__, event);
+        }
+        break;
+    }
+}
+
 

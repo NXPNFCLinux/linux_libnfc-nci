@@ -248,6 +248,18 @@ void nfcHce_deregisterHceCallback()
     nativeNfcManager_deregisterHostCallback();
 }
 
+void nfcHce_registerT3tIdentifier (UINT8 *Id, UINT8 Idsize)
+{
+    if(Idsize > 0)
+    {
+        nfcManager_registerT3tIdentifier(Id, Idsize);
+    }
+    else
+    {
+        nfcManager_doDeregisterT3tIdentifier();
+    }
+}
+
 int nfcHce_sendCommand(unsigned char* command, unsigned int command_length)
 {
     return nativeNfcManager_sendRawFrame(command, command_length);

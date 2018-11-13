@@ -318,9 +318,9 @@ static UINT8 nfa_dm_get_sak(tNFA_DM_DISC_TECH_PROTO_MASK tech_proto_mask)
     UINT8 tech_list = 0;
     unsigned long hostEnable = TRUE, fwdEnable = TRUE;
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
-    if ((GetNumValue(NAME_HOST_LISTEN_ENABLE, &hostEnable, sizeof(hostEnable))))
+    if ((GetNumValue(NAME_HOST_LISTEN_TECH_MASK, &hostEnable, sizeof(hostEnable))))
     {
-        NFA_TRACE_DEBUG2 ("%s:HOST_LISTEN_ENABLE=0x0%lu;", __FUNCTION__, hostEnable);
+        NFA_TRACE_DEBUG2 ("%s:HOST_LISTEN_TECH_MASK=0x0%lu;", __FUNCTION__, hostEnable);
     }
     if((GetNumValue(NAME_NXP_FWD_FUNCTIONALITY_ENABLE, &fwdEnable, sizeof(fwdEnable))))
     {
@@ -1272,10 +1272,10 @@ void nfa_dm_start_rf_discover (void)
         {
             fwdEnable = TRUE; //default value
         }
-        if ((GetNumValue(NAME_HOST_LISTEN_ENABLE, &hostEnable, sizeof(hostEnable))) == FALSE)
+        if ((GetNumValue(NAME_HOST_LISTEN_TECH_MASK, &hostEnable, sizeof(hostEnable))) == FALSE)
         {
-            hostEnable = TRUE;
-            NFA_TRACE_DEBUG2 ("%s:HOST_LISTEN_ENABLE=0x0%lu;", __FUNCTION__, hostEnable);
+            hostEnable = 0;
+            NFA_TRACE_DEBUG2 ("%s:HOST_LISTEN_TECH_MASK=0x0%lu;", __FUNCTION__, hostEnable);
         }
 
         tech_list = nfa_ee_get_supported_tech_list(0x02);

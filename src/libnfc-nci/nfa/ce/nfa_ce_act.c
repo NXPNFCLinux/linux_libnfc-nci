@@ -71,6 +71,21 @@ void nfa_ce_handle_t3t_evt (tCE_EVENT event, tCE_DATA *p_ce_data)
 
     NFA_TRACE_DEBUG1 ("nfa_ce_handle_t3t_evt: event 0x%x", event);
 
+#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+    UINT8 listen_info_idx;
+    /*Fix: for the felica on host for nfcFcallback*/
+    for (listen_info_idx=0; listen_info_idx<NFA_CE_LISTEN_INFO_IDX_INVALID; listen_info_idx++)
+            {
+                if ((p_cb->listen_info[listen_info_idx].flags & NFA_CE_LISTEN_INFO_IN_USE) &&
+                    (p_cb->listen_info[listen_info_idx].flags & NFA_CE_LISTEN_INFO_FELICA))
+                {
+                    p_cb->idx_cur_active      = listen_info_idx;
+                    p_cb->p_active_conn_cback = p_cb->listen_info[p_cb->idx_cur_active].p_conn_cback;
+                    break;
+                }
+            }
+#endif
+
     switch (event)
     {
     case CE_T3T_NDEF_UPDATE_START_EVT:
@@ -874,17 +889,8 @@ BOOLEAN nfa_ce_activate_ntf (tNFA_CE_MSG *p_ce_msg)
             {
                 if (p_cb->listen_info[listen_info_idx].protocol_mask & NFA_PROTOCOL_MASK_T3T)
                 {
-                    /* Check if system_code and nfcid2 that matches activation params */
-                    p_nfcid2 = p_cb->listen_info[listen_info_idx].t3t_nfcid2;
-                    t3t_system_code = p_cb->listen_info[listen_info_idx].t3t_system_code;
-
-                    /* Compare NFCID2 (note: NFCC currently does not return system code in activation parameters) */
-                    if ((memcmp (p_nfcid2, p_cb->activation_params.rf_tech_param.param.lf.nfcid2, NCI_RF_F_UID_LEN)==0)
-                         /* && (t3t_system_code == p_ce_msg->activation.p_activate_info->rf_tech_param.param.lf.system_code) */)
-                    {
-                        /* Found listen_info corresponding to this activation */
-                        break;
-                    }
+                    /* Found listen_info corresponding to this activation */
+                    break;
                 }
 
 #if (NFC_NXP_NOT_OPEN_INCLUDED == FALSE)

@@ -37,8 +37,13 @@ extern "C" {
 #define TARGET_TYPE_KOVIO_BARCODE         10
 #define TARGET_TYPE_ISO14443_3A_3B        11
 
+/* Definition for listen modes */
+#define MODE_LISTEN_A                     0x80
+#define MODE_LISTEN_B                     0x81
+#define MODE_LISTEN_F                     0x82
+
 /* Definitions for TECHNOLOGY_MASK */
-#define DEFAULT_NFA_TECH_MASK                   (-1)
+#define DEFAULT_NFA_TECH_MASK             (-1)
 /** NFC Technology A             */
 #define NFA_TECHNOLOGY_MASK_A           0x01
 /** NFC Technology B             */
@@ -60,7 +65,7 @@ extern "C" {
 /** Empty (type/id/payload len =0) */
 #define NDEF_TNF_EMPTY          0
 /** NFC Forum well-known type/RTD */
-#define NDEF_TNF_WELLKNOWN            1
+#define NDEF_TNF_WELLKNOWN      1
 /** Media-type as defined in RFC 2046 */
 #define NDEF_TNF_MEDIA          2
 /** Absolute URI as defined in RFC 3986 */
@@ -410,8 +415,9 @@ typedef struct {
 typedef struct {
     /**
      * \brief Host Card Emulation activation callback function.
+     * \param mode      Activation technology
      */
-    void (*onHostCardEmulationActivated) ();
+    void (*onHostCardEmulationActivated) (unsigned char mode);
 
     /**
      * \brief Host Card Emulation de-activation callback function.
@@ -724,6 +730,14 @@ extern void nfcHce_deregisterHceCallback();
 * \return 0 if success, otherwise failed.
 */
 extern int nfcHce_sendCommand(unsigned char* command, unsigned int command_length);
+
+/**
+* \brief register T3T identifier
+* \param id:  T3T identifier value.
+* \param length:  T3T identifier size.
+* \return 0 if success, otherwise failed.
+*/
+extern void nfcHce_registerT3tIdentifier (unsigned char *Id, unsigned char Idsize);
 
 /**
 * \brief Register the handover callback.

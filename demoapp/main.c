@@ -202,7 +202,7 @@ void onDataReceived(unsigned char *data, unsigned int data_length)
     
     framework_UnlockMutex(g_HCELock);
 }
-void onHostCardEmulationActivated()
+void onHostCardEmulationActivated(unsigned char mode)
 {
     framework_LockMutex(g_devLock);
     
@@ -210,7 +210,7 @@ void onHostCardEmulationActivated()
     
     if(eDevState_WAIT_ARRIVAL == g_DevState)
     {
-        printf("\tNFC Reader Found\n\n");
+        printf("\tNFC Reader Found, mode=0x%.2x\n\n", mode);
         g_DevState = eDevState_PRESENT;
         g_Dev_Type = eDevType_READER;
         framework_NotifyMutex(g_devLock, 0);

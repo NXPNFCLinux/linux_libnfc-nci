@@ -166,7 +166,7 @@ static void nfa_dm_set_init_nci_params (void)
         nfa_dm_cb.params.lf_t3t_id[xx][0] = 0xFF;
         nfa_dm_cb.params.lf_t3t_id[xx][1] = 0xFF;
         nfa_dm_cb.params.lf_t3t_id[xx][2] = 0x02;
-        nfa_dm_cb.params.lf_t3t_id[xx][2] = 0xFE;
+        nfa_dm_cb.params.lf_t3t_id[xx][3] = 0xFE;
     }
 
     /* LF_T3T_PMM */

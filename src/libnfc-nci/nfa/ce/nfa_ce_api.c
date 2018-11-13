@@ -495,7 +495,7 @@ tNFA_STATUS NFA_CeSetIsoDepListenTech (tNFA_TECHNOLOGY_MASK tech_mask)
     if ((p_msg = (tNFA_CE_MSG *) GKI_getbuf ((UINT16) sizeof(tNFA_CE_MSG))) != NULL)
     {
         p_msg->hdr.event            = NFA_CE_API_CFG_ISODEP_TECH_EVT;
-        p_msg->hdr.layer_specific   = tech_mask;
+        p_msg->hdr.layer_specific   = tech_mask & use_mask;
 
         nfa_sys_sendmsg (p_msg);
 

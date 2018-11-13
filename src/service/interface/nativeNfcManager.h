@@ -115,6 +115,30 @@ void nativeNfcManager_deregisterHostCallback();
 *******************************************************************************/
 INT32 nativeNfcManager_sendRawFrame (UINT8 *buf, UINT32 bufLen);
 
+/*******************************************************************************
+**
+** Function:        nfcManager_doRegisterT3tIdentifier
+**
+** Description:     Registers LF_T3T_IDENTIFIER for NFC-F.
+**                  t3tId: LF_T3T_IDENTIFIER value
+**                  t3tIdsize: LF_T3T_IDENTIFIER size (10 or 18 bytes)
+**
+** Returns:         Handle retrieve from RoutingManager.
+**
+*******************************************************************************/
+void nfcManager_registerT3tIdentifier(UINT8 *t3tId, UINT8 t3tIdsize);
+
+/*******************************************************************************
+**
+** Function:        nfcManager_doDeregisterT3tIdentifier
+**
+** Description:     Deregisters LF_T3T_IDENTIFIER for NFC-F.
+**
+** Returns:         None
+**
+*******************************************************************************/
+void nfcManager_doDeregisterT3tIdentifier(void);
+
 #ifdef __cplusplus
 }
 #endif
