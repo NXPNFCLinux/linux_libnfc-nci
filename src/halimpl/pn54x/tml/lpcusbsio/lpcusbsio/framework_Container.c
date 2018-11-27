@@ -1,9 +1,4 @@
-/**********************************************************************//**
- * @file framework_Container.c
- * @Author Aurelien Le Tourneur <aurelien.le-tourneur@effinnov.com>
- * @version 1.0
- * 
- * @section LICENSE
+/**************************************************************************
  * Copyright (C) 2015 Eff'Innov Technologies 
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,23 +15,13 @@
  * 
  * Developped by Eff'Innov Technologies : contact@effinnov.com
  * 
- * @section DESCRIPTION
- * 
- * Container object allows to manipulate a list of object
- * 
- * @section HISTORY
- * 
- * v1 February 2015 : 
- *       initial version. 
- * 
- * 
  **************************************************************************/
-#include "framework_Container.h"
+
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define MEM_ALLOCATOR(x) malloc(x)
-#define MEM_DEALLOCATOR(x) free(x)
+#include "framework_Container.h"
+#include "framework_Allocator.h"
 
 #define START_OK "valid_start"
 #define START_KO "deleted_start"
@@ -73,7 +58,7 @@ CONTAINER_STATUS container_create(void** pContainer, uint32_t size)
     
     if(CONTAINER_SUCCESS == lStatus)
     {
-        *pContainer = MEM_ALLOCATOR(sizeof(Container_h));
+        *pContainer = framework_AllocMem(sizeof(Container_h));
         if (NULL == *pContainer)
         {
             lStatus = CONTAINER_FAILED;
@@ -81,7 +66,7 @@ CONTAINER_STATUS container_create(void** pContainer, uint32_t size)
         else
         {
             lContainer = (Container_h*)*pContainer;
-            lContainer->m_data=(void**)MEM_ALLOCATOR(size*sizeof(void*));
+            lContainer->m_data=(void**)framework_AllocMem(size*sizeof(void*));
             memset(lContainer->m_data,0,size*sizeof(void*));
             lContainer->m_size_data=0;
             lContainer->m_alloc_size=size;
@@ -104,7 +89,7 @@ CONTAINER_STATUS container_delete(void* pContainer)
     {
         if(NULL != lContainer->m_data)
         {
-            MEM_DEALLOCATOR(lContainer->m_data);
+        	framework_FreeMem(lContainer->m_data);
             lContainer->m_data = NULL;
             
             STR_CPY(lContainer->start, START_KO, sizeof(START_OK));
@@ -227,9 +212,9 @@ void container_check_size(Container_h* pContainer)
     {
         pContainer->m_alloc_size = pContainer->m_alloc_size * 2;
 
-        m_new_data = (void**) MEM_ALLOCATOR(sizeof(void*) * pContainer->m_alloc_size);
+        m_new_data = (void**) framework_AllocMem(sizeof(void*) * pContainer->m_alloc_size);
         memmove(m_new_data, pContainer->m_data, pContainer->m_size_data * sizeof(void*));
-        MEM_DEALLOCATOR(pContainer->m_data);
+        framework_FreeMem(pContainer->m_data);
         pContainer->m_data = m_new_data;
     }
 }
@@ -254,32 +239,6 @@ CONTAINER_STATUS container_clear(void* pContainer)
     {
         memset(lContainer->m_data, 0, lContainer->m_size_data);
         lContainer->m_size_data = 0;
-    }
-    
-    return lStatus;
-}
-
-
-CONTAINER_STATUS container_flushMallocedContent(void* pContainer)
-{
-    CONTAINER_STATUS lStatus = CONTAINER_SUCCESS;
-    Container_h *lContainer = (Container_h *) pContainer;
-    uint32_t sz, i;
-    void *old;
-
-    lStatus = container_isValid(lContainer);
-    
-    if(CONTAINER_SUCCESS == lStatus)
-    {
-        old = NULL;
-        sz = 0x00;
-        container_size(pContainer, &sz);
-        for (i = 0 ; i < sz;i++)
-        {
-            container_get(pContainer, i, &old);
-            MEM_DEALLOCATOR(old);
-        }
-        container_clear(pContainer);
     }
     
     return lStatus;

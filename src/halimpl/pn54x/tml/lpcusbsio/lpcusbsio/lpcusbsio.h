@@ -56,6 +56,8 @@ extern "C" {
  *
  * @{
  */
+#define MAX_WRITE_LENGTH            52 /* Shall be a multiple of 4 */
+#define MAX_READ_LENGTH             (HID_I2C_PACKET_SZ - sizeof(HID_I2C_IN_REPORT_T))
 
 /** NXP USB-IF vendor ID. */
 #define LPCUSBSIO_VID                       0x1FC9

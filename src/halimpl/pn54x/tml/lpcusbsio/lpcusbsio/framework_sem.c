@@ -17,14 +17,7 @@
  * 
  **************************************************************************/
 
-/**
- * @file framework_sem.c
- * @Author Eff'Innov Technologies
- */
-
-
 #include "framework_linux.h"
-
 #include "framework_Allocator.h"
 
 // ####################### Semaphore Generic implementation.

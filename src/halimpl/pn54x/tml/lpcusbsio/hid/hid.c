@@ -72,11 +72,6 @@ hid_device *new_hid_device()
 	return dev;
 }
 
-static void register_error(hid_device *device, const char *op)
-{
-
-}
-
 /* Get an attribute value from a udev_device and return it as a whar_t
    string. The returned string must be freed with free() when done.*/
 static wchar_t *copy_udev_string(struct udev_device *dev, const char *udev_name)
@@ -464,7 +459,7 @@ int HID_API_EXPORT hid_write(hid_device *dev, const unsigned char *data, size_t 
 {
 	int bytes_written;
 
-//    {int i, len=length; unsigned char *p=data; printf("write:"); for(i=0; i<len; i++) printf("%02x ", p[i]); printf("\n");}
+//    {int i, len=data[1]; unsigned char *p=data; printf("HID>>"); for(i=0; i<len; i++) printf("%02x", p[i]); printf("\n");}
 	bytes_written = write(dev->device_handle, data, length);
 
 	return bytes_written;
@@ -489,7 +484,7 @@ int HID_API_EXPORT hid_read_timeout(hid_device *dev, unsigned char *data, size_t
 	bytes_read = read(dev->device_handle, data, length);
 	if (bytes_read < 0 && errno == EAGAIN)
 		bytes_read = 0;
-//    {int i, len=length; unsigned char *p=data; printf("read:"); for(i=0; i<len; i++) printf("%02x ", p[i]); printf("\n");}
+//    {int i, len=data[0]; unsigned char *p=data; printf("HID<<"); for(i=0; i<len; i++) printf("%02x", p[i]); printf("\n");}
 	
 	if (bytes_read >= 0 &&
 	    kernel_version < KERNEL_VERSION(2,6,34) &&

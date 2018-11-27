@@ -1,10 +1,4 @@
- 
-/**********************************************************************//**
- * @file framework_Map.h
- * @Author Aurelien Le Tourneur <aurelien.le-tourneur@effinnov.com>
- * @version 1.0
- * 
- * @section LICENSE
+/**************************************************************************
  * Copyright (C) 2015 Eff'Innov Technologies 
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,17 +15,8 @@
  * 
  * Developped by Eff'Innov Technologies : contact@effinnov.com
  * 
- * @section DESCRIPTION
- * 
- * Map object allows to manipulate a list of object identified by an UID
- * 
- * @section HISTORY
- * 
- * v1 February 2015 : 
- *       initial version. 
- * 
- * 
  **************************************************************************/
+
 #ifndef MAP_H
 #define MAP_H
  

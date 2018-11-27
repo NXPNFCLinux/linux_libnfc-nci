@@ -17,11 +17,6 @@
  * 
  **************************************************************************/
 
-/**
- * @file framework_log.c
- * @Author Eff'Innov Technologies
- */
-
 #include "framework_linux.h"
 
 #include <stdarg.h>

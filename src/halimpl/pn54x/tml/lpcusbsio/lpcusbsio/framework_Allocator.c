@@ -17,11 +17,6 @@
  * 
  **************************************************************************/
 
-/**
- * @file framework_Allocator.c
- * @Author Eff'Innov Technologies
- */
-
 #include "framework_Allocator.h"
 
 #include <stdint.h>

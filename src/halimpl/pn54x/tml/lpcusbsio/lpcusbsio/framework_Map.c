@@ -16,20 +16,12 @@
  * Developped by Eff'Innov Technologies : contact@effinnov.com
  * 
  **************************************************************************/
-
-/**
- * @file framework_Map.c
- * @Author Eff'Innov Technologies
- */
-
-
  
-#include "framework_Map.h"
 #include <stdlib.h>
 #include <string.h>
 
-#define MEM_ALLOCATOR(x) malloc(x)
-#define MEM_DEALLOCATOR(x) free(x)
+#include "framework_Map.h"
+#include "framework_Allocator.h"
 
 #define START_OK "valid_start"
 #define START_KO "deleted_start"
@@ -42,16 +34,16 @@
 
 typedef struct map_element
 {
-	void* id;
-	void* object;
-	struct map_element_t* next;
+    void* id;
+    void* object;
+    struct map_element_t* next;
 }map_element_t;
 
 typedef struct map
 {
-	char start[14];
-	map_element_t* elements;
-	char end[12];
+    char start[14];
+    map_element_t* elements;
+    char end[12];
 }map_t;
 
 STATUS map_isValid(map_t* map);
@@ -61,7 +53,8 @@ STATUS map_create(void ** map)
 	STATUS lStatus = SUCCESS;
 	map_t* lMap = NULL;
 
-	*map = MEM_ALLOCATOR(sizeof(map_t));
+    *map = framework_AllocMem(sizeof(map_t));
+
 	if (NULL == *map)
 	{
 		lStatus = FAILED;
@@ -78,218 +71,218 @@ STATUS map_create(void ** map)
 
 STATUS map_destroy(void* map)
 {
-	STATUS lStatus = SUCCESS;
-	map_t* lMap = (map_t*)map;
+    STATUS lStatus = SUCCESS;
+    map_t* lMap = (map_t*)map;
 
-	lStatus = map_isValid(lMap);
+    lStatus = map_isValid(lMap);
 
-	if (SUCCESS == lStatus)
-	{
-		while (NULL != lMap->elements)
-		{
-			map_remove(map, lMap->elements->id);
-		}
+    if (SUCCESS == lStatus)
+    {
+        while (NULL != lMap->elements)
+        {
+            map_remove(map, lMap->elements->id);
+        }
 
-		STR_CPY(lMap->start, START_KO, sizeof(START_KO));
-		STR_CPY(lMap->end, END_KO, sizeof(END_KO));
+        STR_CPY(lMap->start, START_KO, sizeof(START_KO));
+        STR_CPY(lMap->end, END_KO, sizeof(END_KO));
 
-		MEM_DEALLOCATOR(lMap);
-		lMap = NULL;
-	}
-	return lStatus;
+        framework_FreeMem(lMap);
+        lMap = NULL;
+    }
+    return lStatus;
 }
 
 STATUS map_add(void * map, void* id, void* object)
 {
-	STATUS lStatus = SUCCESS;
-	map_t* lMap = (map_t*)map;
-	void* lObject = NULL;
-	map_element_t* lElement = NULL;
-	map_element_t* lElementTmp = NULL;
+    STATUS lStatus = SUCCESS;
+    map_t* lMap = (map_t*)map;
+    void* lObject = NULL;
+    map_element_t* lElement = NULL;
+    map_element_t* lElementTmp = NULL;
 
-	lStatus = map_isValid(lMap);
+    lStatus = map_isValid(lMap);
 
-	if (SUCCESS == lStatus)
-	{
-		lStatus = map_get(map, id, &lObject);
-		if (SUCCESS == lStatus)
-		{
-			lStatus = ALREADY_EXISTS;
-		}
-		else
-		{
-			lElement = (map_element_t*)MEM_ALLOCATOR(sizeof(map_element_t));
-			if (NULL == lElement)
-			{
-				lStatus = FAILED;
-			}
-			else
-			{
-				lElement->id = id;
-				lElement->next = NULL;
-				lElement->object = object;
-				lElementTmp = lMap->elements;
-				if (NULL == lElementTmp)
-				{
-					lMap->elements = lElement;
-				}
-				else
-				{
-					while (NULL != lElementTmp->next)
-					{
-						lElementTmp = lElementTmp->next;
-					}
-					lElementTmp->next = lElement;
-				}
-				lStatus = SUCCESS;
-			}
-		}
-	}
+    if (SUCCESS == lStatus)
+    {
+        lStatus = map_get(map, id, &lObject);
+        if (SUCCESS == lStatus)
+        {
+            lStatus = ALREADY_EXISTS;
+        }
+        else
+        {
+            lElement = (map_element_t*) framework_AllocMem(sizeof(map_element_t));
 
-	return lStatus;
+        	if (NULL == lElement)
+            {
+                lStatus = FAILED;
+            }
+            else
+            {
+                lElement->id = id;
+                lElement->next = NULL;
+                lElement->object = object;
+                lElementTmp = (map_element_t*) lMap->elements;
+                if (NULL == lElementTmp)
+                {
+                    lMap->elements = lElement;
+                }
+                else
+                {
+                    while (NULL != lElementTmp->next)
+                    {
+                        lElementTmp = (map_element_t*) lElementTmp->next;
+                    }
+                    lElementTmp->next = (void*) lElement;
+                }
+                lStatus = SUCCESS;
+            }
+        }
+    }
+
+    return lStatus;
 
 }
 
 STATUS map_getAll(void* map, void ** elements, int * lenght)
 {
-	STATUS lStatus = SUCCESS;
-	map_t* lMap = (map_t*)map;
-	map_element_t* lElement = NULL;
+    STATUS lStatus = SUCCESS;
+    map_t* lMap = (map_t*)map;
+    map_element_t* lElement = NULL;
     int i;
 
-	lStatus = map_isValid(lMap);
+    lStatus = map_isValid(lMap);
 
-	if (SUCCESS == lStatus)
-	{
-	    if (0x00 == *lenght || NULL == elements)
-	    {
-		*lenght = 0x00;
-		lElement = lMap->elements;
-
-		while (NULL != lElement)
-		{
-		    (*lenght)++;
-		    lElement = lElement->next;
-		}
-	    }
-	    else
-	    {
-		lElement = lMap->elements;
-		for (i = 0x00; i < *lenght; i++)
-		{
-		    elements[i] = lElement->object;
-		}
-	    }
-	}
-
-	return lStatus;
-}
-
-STATUS map_remove(void* map, void* id)
-{
-	STATUS lStatus = SUCCESS;
-	map_t* lMap = (map_t*)map;
-	map_element_t* lElementTmp = NULL;
-	map_element_t* lElement = NULL;
-	int lElementFound = 0x00;
-
-	lStatus = map_isValid(map);
-
-	if (SUCCESS == lStatus)
-	{
-		lElement = lMap->elements;
-		lElementTmp = NULL;
-		while (NULL != lElement)
-		{
-			if (lElement->id == id)
-			{
-				lElementFound = 0x01;
-
-				if (lMap->elements == lElement)
-				{
-					lMap->elements = lElement->next;
-				}
-				else
-				{
-					lElementTmp->next = lElement->next;
-				}
-				break;
-			}
-			lElementTmp = lElement;
-			lElement = lElement->next;
-		}
-
-		if (0x00 == lElementFound)
-		{
-			lStatus = NOT_FOUND;
-		}
-		else
-		{
-			MEM_DEALLOCATOR(lElement);
-		}
-	}
-
-	return lStatus;
-}
-
-STATUS map_get(void* map, void* id, void ** object)
-{
-	STATUS lStatus = SUCCESS;
-	int i = 0x00;
-	map_t* lMap = (map_t*)map;
-	map_element_t* lElement = NULL;
-
-	lStatus = map_isValid(lMap);
-
-	if (NULL == object)
-	{
-		lStatus = INVALID_PARAM;
-	}
-
-	if (SUCCESS == lStatus)
-	{
-		*object = NULL;
-		if (NULL != lMap->elements)
-		{
+    if (SUCCESS == lStatus)
+    {
+        if (0x00 == *lenght || NULL == elements)
+        {
+			*lenght = 0x00;
 			lElement = lMap->elements;
 
 			while (NULL != lElement)
 			{
-				if (lElement->id == id)
-				{
-					*object = lElement->object;
-					break;
-				}
-				lElement = lElement->next;
+				(*lenght)++;
+				lElement = (map_element_t*) lElement->next;
 			}
-
-			if (NULL == *object)
+        }
+        else
+        {
+			lElement = lMap->elements;
+			for (i = 0x00; i < *lenght; i++)
 			{
-				lStatus = NOT_FOUND;
+				elements[i] = (map_element_t*) lElement->object;
 			}
-		}
-		else
-		{
-			lStatus = NOT_FOUND;
-		}
-	}
+        }
+    }
 
-	return lStatus;
+    return lStatus;
+}
+
+STATUS map_remove(void* map, void* id)
+{
+    STATUS lStatus = SUCCESS;
+    map_t* lMap = (map_t*)map;
+    map_element_t* lElementTmp = NULL;
+    map_element_t* lElement = NULL;
+    int lElementFound = 0x00;
+
+    lStatus = map_isValid(map);
+
+    if (SUCCESS == lStatus)
+    {
+        lElement = lMap->elements;
+        lElementTmp = NULL;
+        while (NULL != lElement)
+        {
+            if (lElement->id == id)
+            {
+                lElementFound = 0x01;
+
+                if (lMap->elements == lElement)
+                {
+                    lMap->elements = (map_element_t*) lElement->next;
+                }
+                else
+                {
+                    lElementTmp->next = (void*) lElement->next;
+                }
+                break;
+            }
+            lElementTmp = lElement;
+            lElement = (map_element_t*) lElement->next;
+        }
+
+        if (0x00 == lElementFound)
+        {
+            lStatus = NOT_FOUND;
+        }
+        else
+        {
+        	framework_FreeMem(lElement);
+        }
+    }
+
+    return lStatus;
+}
+
+STATUS map_get(void* map, void* id, void ** object)
+{
+    STATUS lStatus = SUCCESS;
+    map_t* lMap = (map_t*)map;
+    map_element_t* lElement = NULL;
+
+    lStatus = map_isValid(lMap);
+
+    if (NULL == object)
+    {
+        lStatus = INVALID_PARAM;
+    }
+
+    if (SUCCESS == lStatus)
+    {
+        *object = NULL;
+        if (NULL != lMap->elements)
+        {
+            lElement = lMap->elements;
+
+            while (NULL != lElement)
+            {
+                if (lElement->id == id)
+                {
+                    *object = lElement->object;
+                    break;
+                }
+                lElement = (map_element_t*) lElement->next;
+            }
+
+            if (NULL == *object)
+            {
+                lStatus = NOT_FOUND;
+            }
+        }
+        else
+        {
+            lStatus = NOT_FOUND;
+        }
+    }
+
+    return lStatus;
 }
 
 STATUS map_isValid(map_t* map)
 {
-	STATUS lStatus = SUCCESS;
-	if (NULL == map)
-	{
-		lStatus = INVALID_PARAM;
-	}
-	if (SUCCESS == lStatus)
-	{
-		if ((0x00 != STR_CMP(START_OK, map->start, sizeof(START_OK))) || (0x00 != STR_CMP(END_OK, map->end, sizeof(END_OK))))
-		{
-			lStatus = INVALID_MAP;
-		}
-	}
-	return lStatus;
+    STATUS lStatus = SUCCESS;
+    if (NULL == map)
+    {
+        lStatus = INVALID_PARAM;
+    }
+    if (SUCCESS == lStatus)
+    {
+        if ((0x00 != STR_CMP(START_OK, map->start, sizeof(START_OK))) || (0x00 != STR_CMP(END_OK, map->end, sizeof(END_OK))))
+        {
+            lStatus = INVALID_MAP;
+        }
+    }
+    return lStatus;
 }

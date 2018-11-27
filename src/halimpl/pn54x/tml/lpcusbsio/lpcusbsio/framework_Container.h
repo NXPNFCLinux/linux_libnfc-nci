@@ -1,9 +1,4 @@
-/**********************************************************************//**
- * @file framework_Container.h
- * @Author Aurelien Le Tourneur <aurelien.le-tourneur@effinnov.com>
- * @version 1.0
- * 
- * @section LICENSE
+/**************************************************************************
  * Copyright (C) 2015 Eff'Innov Technologies 
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,17 +15,8 @@
  * 
  * Developped by Eff'Innov Technologies : contact@effinnov.com
  * 
- * @section DESCRIPTION
- * 
- * Container object allows to manipulate a list of object
- * 
- * @section HISTORY
- * 
- * v1 February 2015 : 
- *       initial version. 
- * 
- * 
  **************************************************************************/
+
 #ifndef FRAMEWORK_CONTAINER_H
 #define FRAMEWORK_CONTAINER_H
 
@@ -59,8 +45,6 @@ CONTAINER_STATUS container_get(void* pContainer, uint32_t index, void** _out);
 CONTAINER_STATUS container_size(void* pContainer, uint32_t* size);
 
 CONTAINER_STATUS container_clear(void* pContainer);
-
-CONTAINER_STATUS container_flushMallocedContent(void* pContainer);
 
 CONTAINER_STATUS container_removePtr(void* pContainer, void* ref, void** out);
 

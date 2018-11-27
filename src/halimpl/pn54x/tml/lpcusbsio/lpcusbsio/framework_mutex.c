@@ -17,12 +17,6 @@
  * 
  **************************************************************************/
 
-/**
- * @file framework_mutex.c
- * @Author Eff'Innov Technologies
- */
-
-
 #include "framework_linux.h"
 
 #include "framework_Allocator.h"

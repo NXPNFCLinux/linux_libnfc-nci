@@ -17,12 +17,6 @@
  * 
  **************************************************************************/
 
-/**
- * @file framework_linux.h
- * @Author Eff'Innov Technologies
- */
-
-
 #include "framework_Interface.h"
 
 #include <stdlib.h>
@@ -33,3 +27,5 @@
  * @param size 
  */
 void HexDump(const void * buffer, uint32_t size);
+
+void framework_Error(const char* format, ...);

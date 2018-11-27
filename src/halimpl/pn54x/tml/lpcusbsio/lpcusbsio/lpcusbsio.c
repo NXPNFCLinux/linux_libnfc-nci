@@ -37,6 +37,7 @@
 #include "framework_Interface.h"
 #include "framework_Map.h"
 #include "framework_Container.h"
+#include "framework_Allocator.h"
 
 /* ###############
     TODO LIST
@@ -55,8 +56,6 @@
 
 #define MAX_XFER_TX_LENGTH          (HID_I2C_PACKET_SZ - sizeof(HID_I2C_OUT_REPORT_T) - sizeof(HID_I2C_XFER_PARAMS_T))
 #define MAX_XFER_RX_LENGTH          (HID_I2C_PACKET_SZ - sizeof(HID_I2C_IN_REPORT_T))
-#define MAX_WRITE_LENGTH            (HID_I2C_PACKET_SZ - sizeof(HID_I2C_OUT_REPORT_T) - sizeof(HID_I2C_RW_PARAMS_T))
-#define MAX_READ_LENGTH             (HID_I2C_PACKET_SZ - sizeof(HID_I2C_IN_REPORT_T))
 
 typedef struct LPCUSBSIO_Request
 {
@@ -75,7 +74,7 @@ typedef struct LPCUSBSIO_I2C_Ctrl {
     hid_device *hidDev;
     char fwVersion[60];
     uint8_t sesionId;
-    void* request_map;
+	void* request_map;
     void* RequestMapLock;
     uint8_t thread_exit;
     void* ResponsethreadHandle;
@@ -94,7 +93,6 @@ struct LPCUSBSIO_Ctrl {
 
 //static const char *g_LibVersion = "LPCUSBSIO v1.00 (" __DATE__ " " __TIME__ ")";
 static const char *g_fwInitVer = "FW Ver Unavailable";
-static char g_Version[128];
 
 static struct LPCUSBSIO_Ctrl g_Ctrl = {0, };
 
@@ -212,8 +210,7 @@ static int32_t validHandle(LPCUSBSIO_I2C_Ctrl_t *dev)
 {
     LPCUSBSIO_I2C_Ctrl_t *curDev = g_Ctrl.devList;
     
-    while((curDev != NULL) && (dev != curDev))
-    {
+    while (dev != curDev) {
         curDev = curDev->next;
     }
     
@@ -236,7 +233,7 @@ static void freeDevice(LPCUSBSIO_I2C_Ctrl_t *dev)
             }
         }
     }
-    free(dev);
+    framework_FreeMem(dev);
 
     /* unload HID library if all devices are closed. */
     if (g_Ctrl.devList == NULL) {
@@ -298,12 +295,13 @@ static void* WaitRequestResponse(void* pContext)
     {
         ReadIndex = 0x00;
         res = hid_read_timeout(dev->hidDev, inPacket, sizeof(inPacket), LPCUSBSIO_READ_TMO);
+
         if (res > 0) 
         {
             pIn = (HID_I2C_IN_REPORT_T *) &inPacket[0];
             
             framework_LockMutex(dev->RequestMapLock);
-            lMapStatus = map_get(dev->request_map, (void*) pIn->transId, (void**)&lRequest);
+            lMapStatus = map_get(dev->request_map, (void*) (intptr_t) pIn->transId, (void**) &lRequest);
             framework_UnlockMutex(dev->RequestMapLock);
             
             if(SUCCESS == lMapStatus)
@@ -343,6 +341,7 @@ static void* WaitRequestResponse(void* pContext)
             {
                 /*Transition ID received form the chip not recognized !!!!!!   why ??????*/
                 //TODO : define the behaviour in this case
+                
                 res = LPCUSBSIO_ERR_HID_LIB;
             }
         }
@@ -362,13 +361,11 @@ static int32_t I2C_SendRequest(LPCUSBSIO_I2C_Ctrl_t *dev, uint8_t req, uint8_t* 
     int32_t res = 0;
     static uint32_t ReqIndice = 0x00;
     STATUS lMapStatus = SUCCESS;
-    int32_t status = LPCUSBSIO_OK;
     uint8_t outPacket[HID_I2C_PACKET_SZ + 1];
     HID_I2C_OUT_REPORT_T *pOut;
     LPCUSBSIO_Request_t lRequest;
     uint32_t pos = 0x00;
     uint32_t offset = HID_I2C_HEADER_SZ + 1;
-    uint32_t len = 0x00;
     
     lRequest.outPacket = dataOut;
     lRequest.outPacketLen = dataOutLen;
@@ -381,11 +378,11 @@ static int32_t I2C_SendRequest(LPCUSBSIO_I2C_Ctrl_t *dev, uint8_t req, uint8_t* 
     pOut->sesId = dev->sesionId;
     pOut->transId = lRequest.transId = ReqIndice++;
     pOut->req = req;
-    len = pOut->length = HID_I2C_HEADER_SZ + dataOutLen;
+    pOut->length = HID_I2C_HEADER_SZ + dataOutLen;
     
     
     framework_LockMutex(dev->RequestMapLock);
-    lMapStatus = map_add(dev->request_map, (void*)lRequest.transId, (void*) &lRequest);
+    lMapStatus = map_add(dev->request_map, (void*) (intptr_t) lRequest.transId,	(void*) &lRequest);
     framework_UnlockMutex(dev->RequestMapLock);
     
     if(SUCCESS == lMapStatus)
@@ -396,19 +393,19 @@ static int32_t I2C_SendRequest(LPCUSBSIO_I2C_Ctrl_t *dev, uint8_t req, uint8_t* 
         framework_LockMutex(lRequest.notifier);
         
         framework_LockMutex(dev->SendLock);
-        do
-        {
+        //do
+        //{
             outPacket[0] = 0;
 
             if(lRequest.outPacket != NULL) memcpy(&outPacket[offset], lRequest.outPacket + pos, HID_I2C_PACKET_SZ + 1 - offset);
         
             res = hid_write(dev->hidDev, outPacket, HID_I2C_PACKET_SZ + 1);
-            if (HID_I2C_PACKET_SZ + 1 == res)
-            {
-                pos += HID_I2C_PACKET_SZ - offset + 1;
-                offset = 0x01;
-            }
-        } while (pos < len);
+        //    if (HID_I2C_PACKET_SZ + 1 == res)
+        //    {
+        //        pos += HID_I2C_PACKET_SZ - offset + 1;
+        //        offset = 0x01;
+        //    }
+        //} while (pos < len);
         
         framework_UnlockMutex(dev->SendLock);
         if(0x00 < res)
@@ -422,9 +419,9 @@ static int32_t I2C_SendRequest(LPCUSBSIO_I2C_Ctrl_t *dev, uint8_t req, uint8_t* 
             framework_UnlockMutex(lRequest.notifier);
             res = LPCUSBSIO_ERR_HID_LIB;
         }
-
+        
         framework_LockMutex(dev->RequestMapLock);
-        map_remove(dev->request_map, (void*)lRequest.transId);
+        map_remove(dev->request_map, (void*) (intptr_t) lRequest.transId);
         framework_UnlockMutex(dev->RequestMapLock);
         FreeNotifier(dev, lRequest.notifier);
         //framework_DeleteMutex(lRequest.notifier);
@@ -434,7 +431,7 @@ static int32_t I2C_SendRequest(LPCUSBSIO_I2C_Ctrl_t *dev, uint8_t req, uint8_t* 
     {
         res = LPCUSBSIO_ERR_HID_LIB;
     }
-
+    
     return res;
 }
 
@@ -468,7 +465,6 @@ LPCUSBSIO_API LPC_HANDLE I2C_Open(uint32_t index)
     hid_device *pHid = NULL;
     LPCUSBSIO_I2C_Ctrl_t *dev = NULL;
     struct hid_device_info *cur_dev;
-    eResult res;
 
     cur_dev = GetDevAtIndex(index);
 
@@ -478,7 +474,7 @@ LPCUSBSIO_API LPC_HANDLE I2C_Open(uint32_t index)
 
         if (pHid) 
         {
-            dev = malloc(sizeof(LPCUSBSIO_I2C_Ctrl_t));
+            dev = framework_AllocMem(sizeof(LPCUSBSIO_I2C_Ctrl_t));
             memset(dev, 0, sizeof(LPCUSBSIO_I2C_Ctrl_t));
             dev->hidDev = pHid;
             dev->hidInfo = cur_dev;
@@ -495,7 +491,7 @@ LPCUSBSIO_API LPC_HANDLE I2C_Open(uint32_t index)
             framework_CreateMutex(&dev->RequestMapLock);
             framework_CreateMutex(&dev->NotifierContainerLock);
             dev->thread_exit = 0x00;
-            res = framework_CreateThread(&dev->ResponsethreadHandle , WaitRequestResponse, dev);
+            framework_CreateThread(&dev->ResponsethreadHandle , WaitRequestResponse, dev);
 
         }
     }
@@ -534,39 +530,38 @@ LPCUSBSIO_API int32_t I2C_CancelAllRequest(LPC_HANDLE handle)
 {
     LPCUSBSIO_I2C_Ctrl_t *dev = (LPCUSBSIO_I2C_Ctrl_t *) handle;
     uint32_t lMapLenght = 0x00, i;
-    LPCUSBSIO_Request_t* lRequest = NULL;
+    LPCUSBSIO_Request_t** lRequest = NULL;
     void* Notifier = NULL;
 
     framework_LockMutex(dev->RequestMapLock);
 
     //1rst call => we get map lenght
-    map_getAll(dev->request_map, NULL, &lMapLenght);
+    map_getAll(dev->request_map, NULL, (int*)&lMapLenght);
 
-    lRequest = malloc(lMapLenght * sizeof(LPCUSBSIO_Request_t));
+    lRequest = framework_AllocMem(lMapLenght * sizeof(LPCUSBSIO_Request_t));
     //2nd call => we get all object in map
-    map_getAll(dev->request_map, (void **) &lRequest, &lMapLenght);    
+    map_getAll(dev->request_map, (void **) lRequest, (int*) &lMapLenght);
 
     for (i = 0x00; i < lMapLenght; i++)
     {
         //Cancel request
-        if (NULL != lRequest[i].notifier)
+        if (NULL != (*lRequest)[i].notifier)
         {
-        lRequest[i].status = LPCUSBSIO_REQ_CANCELED;
-        Notifier = lRequest[i].notifier;
-        framework_LockMutex(Notifier);
-        framework_NotifyMutex(Notifier, 0);
-        framework_UnlockMutex(Notifier);
-        Notifier = NULL;
+			(*lRequest)[i].status = LPCUSBSIO_REQ_CANCELED;
+			Notifier = (*lRequest)[i].notifier;
+			framework_LockMutex(Notifier);
+			framework_NotifyMutex(Notifier, 0);
+			framework_UnlockMutex(Notifier);
+			Notifier = NULL;
         }
     }
-    
+    framework_FreeMem(lRequest);
     framework_UnlockMutex(dev->RequestMapLock);
     return 0;    
 }
 LPCUSBSIO_API int32_t I2C_Close(LPC_HANDLE handle)
 {
     LPCUSBSIO_I2C_Ctrl_t *dev = (LPCUSBSIO_I2C_Ctrl_t *) handle;
-    int32_t res;
     uint8_t inPacket[HID_I2C_PACKET_SZ + 1];
     
     if (validHandle(handle) == 0) 
@@ -574,8 +569,7 @@ LPCUSBSIO_API int32_t I2C_Close(LPC_HANDLE handle)
         return LPCUSBSIO_ERR_BAD_HANDLE;
     }
 
-    res = I2C_SendRequest(dev, HID_I2C_REQ_DEINIT_PORT, NULL, 0, inPacket, sizeof(inPacket));
-    
+    I2C_SendRequest(dev, HID_I2C_REQ_DEINIT_PORT, NULL, 0, inPacket, sizeof(inPacket));
     
     /*Shutdown reader thread*/
     dev->thread_exit = 0x01;
@@ -629,12 +623,12 @@ LPCUSBSIO_API int32_t I2C_DeviceRead(LPC_HANDLE handle,
     }
 
     /* do parameter check */
-/*    if ((sizeToTransfer > MAX_READ_LENGTH) ||
-        ((sizeToTransfer > 0) && (buffer == NULL)) ||
-        (deviceAddress > 127)) 
-    {
-        return LPCUSBSIO_ERR_INVALID_PARAM;
-    }*/
+    //if ((sizeToTransfer > MAX_READ_LENGTH) ||
+    //    ((sizeToTransfer > 0) && (buffer == NULL)) ||
+    //    (deviceAddress > 127)) 
+    //{
+    //    return LPCUSBSIO_ERR_INVALID_PARAM;
+    //}
 
     param.length = sizeToTransfer;
     param.options = options;
@@ -646,9 +640,27 @@ LPCUSBSIO_API int32_t I2C_DeviceRead(LPC_HANDLE handle,
     {
         /* parse response */
         pIn = (HID_I2C_IN_REPORT_T *) &inPacket[0];
-        res = pIn->length - HID_I2C_HEADER_SZ;
-        /* copy data back to user buffer */
-        memcpy(buffer, &pIn->data[0], res);
+        res = pIn->length  - HID_I2C_HEADER_SZ;
+
+        if (pIn->length <= HID_I2C_PACKET_SZ) 
+        {
+            /* copy data back to user buffer */
+            memcpy(buffer, &pIn->data[0], res);
+        }
+        else
+        {
+            uint8_t ptr = HID_I2C_HEADER_SZ;
+            uint8_t temp, i=0;
+            while(res > 0)
+            {
+                temp = (res > HID_I2C_PACKET_SZ-HID_I2C_HEADER_SZ) ? (HID_I2C_PACKET_SZ-HID_I2C_HEADER_SZ) : res;
+                memcpy(&buffer[i], &inPacket[ptr], temp);
+                i += temp;
+                res -= temp;
+                ptr += temp + HID_I2C_HEADER_SZ;
+            }
+            res = i;
+        }
     }
 
     return res;
@@ -797,6 +809,29 @@ LPCUSBSIO_API const wchar_t *I2C_Error(LPC_HANDLE handle, int32_t status)
     
     return retStr;
 }
+
+
+//AL : Useless
+//LPCUSBSIO_API const char *I2C_GetVersion(LPC_HANDLE handle)
+//{
+//    LPCUSBSIO_I2C_Ctrl_t *dev = (LPCUSBSIO_I2C_Ctrl_t *) handle;
+//    uint32_t index = 0;
+//
+//    /* copy library version */
+//    memcpy(&g_Version[index], &g_LibVersion[0], strlen(g_LibVersion));
+//    index += strlen(g_LibVersion);
+//
+//    /* if handle is good copy firmware version */
+//    if (validHandle(handle) != 0) {
+//        g_Version[index] = '/';
+//        index++;
+//        /* copy firmware version */
+//        memcpy(&g_Version[index], &dev->fwVersion[0], strlen(dev->fwVersion));
+//        index += strlen(dev->fwVersion);
+//    }
+//
+//    return &g_Version[0];
+//}
 
 LPCUSBSIO_API LPCUSBSIO_ERR_T GPIO_SetVENValue(LPC_HANDLE handle, uint8_t newValue)
 {
