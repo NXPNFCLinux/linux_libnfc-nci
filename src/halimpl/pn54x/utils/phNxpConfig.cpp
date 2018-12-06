@@ -62,7 +62,7 @@ const char transport_config_path[] = "/etc/";
 #define config_pn548      "pn548"
 #define IsStringValue       0x80000000
 
-const char config_timestamp_path[] = "/usr/local/etc/libnfc-nxp-stamp-h1";
+const char config_timestamp_path[] = "/var/tmp/libnfc-nxp-stamp-h1";
 
 using namespace::std;
 
