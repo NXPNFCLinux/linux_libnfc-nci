@@ -122,16 +122,16 @@ bool RoutingManager::initialize ()
     if(mHostListnEnable)
     {
         // Tell the host-routing to only listen on Nfc-A/Nfc-B
+        nfaStat = NFA_CeSetIsoDepListenTech(mHostListnEnable& (NFA_TECHNOLOGY_MASK_A | NFA_TECHNOLOGY_MASK_B));
+        if (nfaStat != NFA_STATUS_OK)
+        {
+            NXPLOG_API_E ("Failed to configure CE IsoDep technologies");
+        }
+        // Tell the host-routing to only listen on Nfc-A/Nfc-B
         nfaStat = NFA_CeRegisterAidOnDH (NULL, 0, stackCallback);
         if (nfaStat != NFA_STATUS_OK)
         {
             NXPLOG_API_E ("Failed to register wildcard AID for DH");
-        }
-        // Tell the host-routing to only listen on Nfc-A/Nfc-B
-        nfaStat = NFA_CeSetIsoDepListenTech(NFA_TECHNOLOGY_MASK_A | NFA_TECHNOLOGY_MASK_B);
-        if (nfaStat != NFA_STATUS_OK)
-        {
-            NXPLOG_API_E ("Failed to configure CE IsoDep technologies");
         }
     }
     memset(mRxDataBuffer, 0, MAX_CE_RX_BUFFER_SIZE);
@@ -519,12 +519,24 @@ void RoutingManager::nfaEeCallback (tNFA_EE_EVT event, tNFA_EE_CBACK_DATA* event
 
 int RoutingManager::registerT3tIdentifier(UINT8* t3tId, UINT8 t3tIdLen)
 {
+    unsigned long tech = 0;
+    
     NXPLOG_API_D ("%s: Start to register NFC-F system on DH", __func__);
 
     if (t3tIdLen != (2 + NCI_RF_F_UID_LEN))
     {
         NXPLOG_API_E ("%s: Invalid length of T3T Identifier", __func__);
         return NFA_HANDLE_INVALID;
+    }
+
+    if ((GetNumValue(NAME_HOST_LISTEN_TECH_MASK, &tech, sizeof(tech))))
+    {
+        NXPLOG_API_E ("%s:HOST_LISTEN_TECH_MASK=%d;", __FUNCTION__, tech);
+        if (!(tech & NFA_TECHNOLOGY_MASK_F))
+        {
+            NXPLOG_API_E ("%s: Type F LISTEN mode disabled in configuration file", __func__);
+            return NFA_HANDLE_INVALID;
+        }
     }
 
     if (isDiscoveryStarted()) {

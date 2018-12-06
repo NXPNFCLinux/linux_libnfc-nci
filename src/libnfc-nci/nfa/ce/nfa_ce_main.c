@@ -85,7 +85,7 @@ void nfa_ce_init (void)
     /* Generate a random NFCID for Type-3 NDEF emulation (Type-3 tag NFCID2 must start with 02:FE) */
     nfa_ce_t3t_generate_rand_nfcid (nfa_ce_cb.listen_info[NFA_CE_LISTEN_INFO_IDX_NDEF].t3t_nfcid2);
     nfa_ce_cb.listen_info[NFA_CE_LISTEN_INFO_IDX_NDEF].rf_disc_handle = NFA_HANDLE_INVALID;
-    nfa_ce_cb.isodep_disc_mask  = NFA_CE_DEFAULT_ISODEP_DISC_MASK;
+    nfa_ce_cb.isodep_disc_mask  = 0;
     nfa_ce_cb.idx_wild_card     = NFA_CE_LISTEN_INFO_IDX_INVALID;
 
     /* register message handler on NFA SYS */
