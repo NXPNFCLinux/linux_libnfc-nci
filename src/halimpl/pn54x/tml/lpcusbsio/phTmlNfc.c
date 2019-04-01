@@ -112,7 +112,7 @@ NFCSTATUS phTmlNfc_Init(pphTmlNfc_Config_t pConfig)
             if (NFCSTATUS_SUCCESS != wInitStatus)
             {
                 wInitStatus = PHNFCSTVAL(CID_NFC_TML, NFCSTATUS_INVALID_DEVICE);
-                gpphTmlNfc_Context->pDevHandle = (void *) NFCSTATUS_INVALID_DEVICE;
+                gpphTmlNfc_Context->pDevHandle = NULL;
             }
             else
             {
