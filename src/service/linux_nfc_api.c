@@ -30,6 +30,11 @@ int ndef_readText(unsigned char *ndef_buff, unsigned int ndef_buff_length, char 
     return nativeNdef_readText(ndef_buff, ndef_buff_length, out_text, out_text_length);
 }
 
+int ndef_readLanguageCode(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_language_code, unsigned int out_language_code_length)
+{
+    return nativeNdef_readLang(ndef_buff, ndef_buff_length, out_language_code, out_language_code_length);
+}
+
 int ndef_readUrl(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_url, unsigned int out_url_length)
 {
     return nativeNdef_readUrl(ndef_buff, ndef_buff_length, out_url, out_url_length);

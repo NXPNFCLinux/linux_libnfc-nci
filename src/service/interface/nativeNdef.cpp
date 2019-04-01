@@ -401,6 +401,36 @@ INT32 nativeNdef_readText( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outText, U
     return (payloadLength - langCodeLen - 1);
 }
 
+INT32 nativeNdef_readLang( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outLang, UINT32 LangLen)
+{
+    int langCodeLen;
+    UINT8 *payload;
+    UINT32 payloadLength;
+    UINT8 ndef_tnf;
+    UINT8 *ndef_type;
+    UINT8 ndef_typeLength;
+    nfc_friendly_type_t friendly_type;
+
+    ndef_type = NDEF_RecGetType((UINT8*)ndefBuff, &ndef_tnf, &ndef_typeLength);
+    friendly_type = nativeNdef_getFriendlyType(ndef_tnf, ndef_type, ndef_typeLength);
+    if (friendly_type != NDEF_FRIENDLY_TYPE_TEXT)
+    {
+        return -1;
+    }
+    payload = NDEF_RecGetPayload((UINT8*)ndefBuff, &payloadLength);
+    if (payload == NULL)
+    {
+        return -1;
+    }
+    langCodeLen = payload[0];
+    if (LangLen < langCodeLen)
+    {
+        return -1;
+    }
+    memcpy(outLang, payload + 1, langCodeLen);
+    return (langCodeLen);
+}
+
 INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT32 urlBufferLen)
 {
     UINT32 prefixIdx;

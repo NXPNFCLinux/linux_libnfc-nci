@@ -768,6 +768,8 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
     nfc_friendly_type_t lNDEFType = NDEF_FRIENDLY_TYPE_OTHER;
     unsigned int res = 0x00;
     unsigned int i = 0x00;
+    unsigned int langCode_len;
+    char* LanguageCode = NULL;
     char* TextContent = NULL;
     char* URLContent = NULL;
     nfc_handover_select_t HandoverSelectContent;
@@ -808,15 +810,24 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
             case NDEF_FRIENDLY_TYPE_TEXT:
             {
                 TextContent = malloc(res * sizeof(char));
-                res = ndef_readText(NDEFContent, res, TextContent, res);
-                if(0x00 <= res)
+                langCode_len = ndef_readLanguageCode(NDEFContent, res, TextContent, res);
+                if(0x00 <= langCode_len)
                 {
-                    printf("\t\t\t\tType :                 'Text'\n");
-                    printf("\t\t\t\tText :                 '%s'\n\n", TextContent);
-                }
-                else
-                {
-                    printf("\t\t\t\tRead NDEF Text Error\n");
+                    LanguageCode = malloc((langCode_len + 1) * sizeof(char));
+                    memcpy(LanguageCode, TextContent, langCode_len);
+                    LanguageCode[langCode_len] = '\0'; /* Add extra character for proper display */
+                    res = ndef_readText(NDEFContent, res, TextContent, res);
+                    if(0x00 <= res)
+                    {
+                        TextContent[res] = '\0'; /* Add extra character for proper display */
+                        printf("\t\t\t\tType :                 'Text'\n");
+                        printf("\t\t\t\tLang :                 '%s'\n", LanguageCode);
+                        printf("\t\t\t\tText :                 '%s'\n\n", TextContent);
+                    }
+                    else
+                    {
+                        printf("\t\t\t\tRead NDEF Text Error\n");
+                    }
                 }
                 if(NULL != TextContent)
                 {
@@ -832,8 +843,8 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
                 res = ndef_readUrl(NDEFContent, res, URLContent, res + 27);
                 if(0x00 <= res)
                 {
-                    printf("                Type :                 'URI'\n");
-                    printf("                URI :                 '%s'\n\n", URLContent);
+                    printf("\t\t\t\tType :                 'URI'\n");
+                    printf("\t\t\t\t URI :                 '%s'\n\n", URLContent);
                     /*NOTE: open url in browser*/
                     /*open_uri(URLContent);*/
                 }

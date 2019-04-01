@@ -463,6 +463,16 @@ typedef struct {
 extern int ndef_readText(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_text, unsigned int out_text_length);
 
 /**
+* \brief read language code from NDEF Text type message
+* \param ndef_buff:  the buffer with ndef message
+* \param ndef_buff_length:  the length of buffer
+* \param out_language_code:  the buffer to fill language code in
+* \param out_language_code_length:  the length of out_language_code buffer
+* \return the length of language code if success, otherwise -1
+*/
+extern int ndef_readLanguageCode(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_language_code, unsigned int out_language_code_length);
+
+/**
 * \brief read uri message from NDEF data.
 * \param ndef_buff:  the buffer with ndef message
 * \param ndef_buff_length:  the length of buffer

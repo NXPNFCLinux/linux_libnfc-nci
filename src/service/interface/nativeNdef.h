@@ -29,6 +29,8 @@ extern nfc_friendly_type_t nativeNdef_getFriendlyType(UINT8 tnf, UINT8 *type, UI
 
 extern INT32 nativeNdef_readText( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outText, UINT32 textLen);
 
+extern INT32 nativeNdef_readLang( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outLang, UINT32 LangLen);
+
 extern INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT32 urlBufferLen);
 
 extern INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request_t *hrInfo);
