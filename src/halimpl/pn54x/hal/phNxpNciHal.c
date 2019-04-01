@@ -948,19 +948,19 @@ static void phNxpNciHal_read_complete(void *pContext, phTmlNfc_TransactInfo_t *p
             (*nxpncihal_ctrl.p_nfc_stack_data_cback)(
                     nxpncihal_ctrl.rx_data_len, nxpncihal_ctrl.p_rx_data);
         }
-        else if (pInfo->wStatus == NFCSTATUS_BOARD_COMMUNICATION_ERROR)
+    }
+    else if (pInfo->wStatus == NFCSTATUS_BOARD_COMMUNICATION_ERROR)
+    {
+        NXPLOG_NCIHAL_E("read COM error status = 0x%x", pInfo->wStatus);
+        if (nxpncihal_ctrl.p_nfc_stack_cback != NULL)
         {
-            NXPLOG_NCIHAL_E("read COM error status = 0x%x", pInfo->wStatus);
-            if (nxpncihal_ctrl.p_nfc_stack_cback != NULL)
-            {
-                /* inform upper layer: */
-                (* nxpncihal_ctrl.p_nfc_stack_cback)(HAL_NFC_ERROR_EVT, HAL_NFC_STATUS_ERR_CMD_TIMEOUT);
-            }
-            /* do not call phTmlNfc_Read() for pending request (see later),
-               otherwise it may create an infinite loop if NFC device is not
-               plugged... */
-            return;
+            /* inform upper layer: */
+            (* nxpncihal_ctrl.p_nfc_stack_cback)(HAL_NFC_ERROR_EVT, HAL_NFC_STATUS_ERR_CMD_TIMEOUT);
         }
+        /* do not call phTmlNfc_Read() for pending request (see later),
+           otherwise it may create an infinite loop if NFC device is not
+           plugged... */
+           return;
     }
     else
     {
