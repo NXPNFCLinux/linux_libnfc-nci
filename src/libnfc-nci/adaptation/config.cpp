@@ -45,7 +45,7 @@
 
 #define LOG_TAG "NfcAdaptation"
 
-const char alternative_config_path[] = "/usr/local/etc/";
+const char alternative_config_path[] = CONFIG_PATH;
 const char transport_config_path[] = "/etc/";
 
 #define config_name             "libnfc-nci.conf"

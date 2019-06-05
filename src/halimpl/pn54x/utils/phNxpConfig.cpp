@@ -49,7 +49,7 @@
 #if GENERIC_TARGET
 const char alternative_config_path[] = "/data/nfc/";
 #else
-const char alternative_config_path[] = "/usr/local/etc/";
+const char alternative_config_path[] = CONFIG_PATH;
 #endif
 
 const char transport_config_path[] = "/etc/";

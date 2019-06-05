@@ -14,6 +14,7 @@ pkgconfiglib_DATA = \
 	libnfc-nci.pc
 
 AM_CPPFLAGS = \
+	-DCONFIG_PATH='"$(configdir)/"' \
 	-I$(srcdir)/src/include \
 	$(INCLUDE_PARAMS) \
 	$(libnfc_nci_linux_la_FLAGS)
