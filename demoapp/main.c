@@ -647,10 +647,8 @@ int InitMode(int tag, int p2p, int hce)
     return res;
 }
 
-int DeinitPollMode()
+void DeinitPollMode()
 {
-    int res = 0x00;
-    
     nfcSnep_stopServer();
     
     nfcManager_disableDiscovery();
@@ -661,13 +659,7 @@ int DeinitPollMode()
     
     nfcHce_deregisterHceCallback();
     
-    res = nfcManager_doDeinitialize();
-    
-    if(0x00 != res)
-    {
-        printf("NFC Service Deinit Failed\n");
-    }
-    return res;
+    return;
 }
 
 int SnepPush(unsigned char* msgToPush, unsigned int len)
@@ -1876,7 +1868,7 @@ void cmd_poll(int arg_len, char** arg)
             WaitDeviceArrival(0x01, NULL , 0x00);
         }
     
-        res = DeinitPollMode();
+        DeinitPollMode();
     }
     
     printf("Leaving ...\n");
@@ -1921,7 +1913,7 @@ void cmd_push(int arg_len, char** arg)
             NDEFMsgLen = 0x00;
         }
         
-        res = DeinitPollMode();
+        DeinitPollMode();
     }
     
     printf("Leaving ...\n");
@@ -1971,7 +1963,7 @@ void cmd_share(int arg_len, char** arg)
             NDEFMsgLen = 0x00;
         }
         
-        res = DeinitPollMode();
+        DeinitPollMode();
     }
     
     printf("Leaving ...\n");
@@ -2015,7 +2007,7 @@ void cmd_write(int arg_len, char** arg)
             NDEFMsgLen = 0x00;
         }
         
-        res = DeinitPollMode();
+        DeinitPollMode();
     }
     
     printf("Leaving ...\n");

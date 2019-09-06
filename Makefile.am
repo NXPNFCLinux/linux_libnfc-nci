@@ -14,6 +14,7 @@ pkgconfiglib_DATA = \
 	libnfc-nci.pc
 
 AM_CPPFLAGS = \
+	-DCONFIG_PATH='"$(configdir)/"' \
 	-I$(srcdir)/src/include \
 	$(INCLUDE_PARAMS) \
 	$(libnfc_nci_linux_la_FLAGS)
@@ -37,6 +38,7 @@ endif
 
 if LPCUSBSIO
 AM_LDFLAGS += `pkg-config libudev --libs` 
+
 udevrules_DATA = src/halimpl/pn54x/tml/lpcusbsio/97-lpcusbsio-hid.rules
 udevrulesdir = /etc/udev/rules.d
 endif
@@ -366,6 +368,4 @@ libnfc_nci_linux_la_LIBADD = $(AC_LIBOBJS)
 libnfc_nci_linux_la_LDFLAGS := $(AM_LDFLAGS)
 libnfc_nci_linux_la_LDFLAGS += -shared -pthread -ldl -lrt -fPIC -release 1 -version-info 0:0:0
 
-
 nfcDemoApp_LDFLAGS = -pthread -ldl -lrt -lnfc_nci_linux
-

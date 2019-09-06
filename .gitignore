@@ -62,3 +62,7 @@ Makefile
 /missing
 /stamp-h1
 /libnfc-nci.pc
+
+# Editor
+*.orig
+*.rej

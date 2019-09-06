@@ -2281,12 +2281,18 @@ INT32 nativeNfcTag_doTransceive (UINT32 handle, UINT8* txBuffer, INT32 txBufferL
                 NXPLOG_API_E ("%s: fail send; error=%d", __FUNCTION__, status);
                 break;
             }
-            waitOk = sTransceiveEvent.wait (sGeneralTransceiveTimeout);
+            if (timeout != 0)
+            {
+                waitOk = sTransceiveEvent.wait (sGeneralTransceiveTimeout);
+            }
+            else {
+                waitOk = TRUE;
+            }
         }
 
         if (waitOk == FALSE || sTransceiveRfTimeout) //if timeout occurred
         {
-            NXPLOG_API_E ("%s: wait response timeout", __FUNCTION__);
+            NXPLOG_API_E ("%s: wait response timeout %d, %d", __FUNCTION__, waitOk, sTransceiveRfTimeout);
             sRxDataActualSize = 0;
             NXPLOG_API_D ("%s: Tag is lost, set state to deactivated", __FUNCTION__);
             doDisconnect ();
