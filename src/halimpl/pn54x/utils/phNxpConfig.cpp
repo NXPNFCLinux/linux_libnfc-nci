@@ -654,7 +654,7 @@ const CNxpNfcParam* CNxpNfcConfig::find(const char* p_name) const
         {
             if((*it)->str_len() > 0)
             {
-                NXPLOG_EXTNS_D("%s found %s=%s\n", __func__, p_name, (*it)->str_value());
+                NXPLOG_EXTNS_D("%s found %s\n", __func__, p_name);
             }
             else
             {
@@ -952,7 +952,7 @@ extern "C" int GetNxpStrValue(const char* name, char* pValue, unsigned long len)
 {
     CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance();
     bool val_status = rConfig.getValue(name, pValue, len);
-    NXPLOG_EXTNS_D("%s: NXP Config Parameter : %s=%s\n", __FUNCTION__, name, pValue);
+    NXPLOG_EXTNS_D("%s: NXP Config Parameter : %s\n", __FUNCTION__, name);
     return val_status;
 }
 

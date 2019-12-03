@@ -19,6 +19,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <time.h>
+#include <math.h>
 #include "data_types.h"
 #include "phNxpLog.h"
 #include "phNxpConfig.h"
@@ -38,6 +41,8 @@ const char * NXPLOG_ITEM_API     = "NxpFunc:    ";
 const char * NXPLOG_ITEM_HCPX    = "NxpHcpX:     ";
 const char * NXPLOG_ITEM_HCPR    = "NxpHcpR:     ";
 #endif /*NXP_HCI_REQ*/
+
+static pthread_mutex_t cs_mutex;
 
 /* global log level structure */
 nci_log_level_t gLog_level;
@@ -206,14 +211,39 @@ void phNxpLog_LogMsg (UINT32 trace_set_mask, const char *item, const char *fmt_s
     static char buffer [BTE_LOG_BUF_SIZE];
     va_list ap;
     UINT32 trace_type = trace_set_mask & 0x07; //lower 3 bits contain trace type
+    time_t timer;
+    char buf[26];
+    int millisec;
+    struct tm* tm_info;
+    struct timeval tv;
+    int i;
+
+    pthread_mutex_lock( &cs_mutex );
+
+    gettimeofday(&tv, NULL);
+
+    millisec = lrint(tv.tv_usec/1000.0); // Round to nearest millisec
+    if (millisec>=1000) { // Allow for rounding up to nearest second
+        millisec -=1000;
+        tv.tv_sec++;
+    }
+
+    tm_info = localtime(&tv.tv_sec);
+
+    strftime(buf, 26, "%Y:%m:%d-%H:%M:%S", tm_info);
+    fprintf (stderr, "%s.%03d\t", buf, millisec);
 
     fprintf (stderr, "%s", item);
+
     va_start (ap, fmt_str);
-    vsnprintf (buffer, BTE_LOG_BUF_SIZE, fmt_str, ap);
+    i = vsnprintf (buffer, BTE_LOG_BUF_SIZE, fmt_str, ap);
+    if(buffer[i-1] == '\n') buffer[i-1] = '\0';
     vfprintf (stderr, buffer, ap);
-    
     va_end (ap);
+
     fprintf (stderr, "\n");
+
+    pthread_mutex_unlock( &cs_mutex );
 }
 
 void phNxpLog_LogBuffer (UINT32 trace_set_mask, const char * item, unsigned char * buffer, unsigned len)
