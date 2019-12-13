@@ -3196,8 +3196,9 @@ static void rw_i93_data_cback (UINT8 conn_id, tNFC_CONN_EVT event, tNFC_CONN *p_
         p_i93->state    = RW_I93_STATE_IDLE;
         p_i93->sent_cmd = 0;
 
-        /* if any response, send presence check with ok */
-        rw_data.status  = NFC_STATUS_OK;
+        /* depending of response length, send presence check with ok or failed */
+        if (p_resp->len > 1) rw_data.status  = NFC_STATUS_OK;
+        else rw_data.status  = NFC_STATUS_FAILED;
         (*(rw_cb.p_cback)) (RW_I93_PRESENCE_CHECK_EVT, &rw_data);
         GKI_freebuf (p_resp);
         break;
