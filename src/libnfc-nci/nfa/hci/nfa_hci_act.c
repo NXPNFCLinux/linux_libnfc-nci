@@ -1299,6 +1299,9 @@ void nfa_hci_handle_admin_gate_cmd (UINT8 *p_data)
         STREAM_TO_UINT8 (dest_gate,   p_data);
         STREAM_TO_UINT8 (pipe,        p_data);
 
+        /* Prevent "set but not used" warning */
+        (void) dest_host;
+
         if (  (dest_gate == NFA_HCI_IDENTITY_MANAGEMENT_GATE)
             ||(dest_gate == NFA_HCI_LOOP_BACK_GATE)
 #if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
@@ -1643,6 +1646,9 @@ void nfa_hci_handle_admin_gate_rsp (UINT8 *p_data, UINT8 data_len)
                 STREAM_TO_UINT8 (dest_host,   p_data);
                 STREAM_TO_UINT8 (dest_gate,   p_data);
                 STREAM_TO_UINT8 (pipe,        p_data);
+
+                /* Prevent "set but not used" warning */
+                (void) source_host;
 
                 /* Sanity check */
                 if (source_gate != nfa_hci_cb.local_gate_in_use)
