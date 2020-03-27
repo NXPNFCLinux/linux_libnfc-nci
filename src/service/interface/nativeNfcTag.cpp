@@ -2101,31 +2101,33 @@ INT32 nativeNfcTag_doFormatTag(UINT32 tagHandle)
     {
         NXPLOG_API_D ("Format with First Key Failed");
 
-        sem_init (&sFormatSem, 0, 0);
-
         status = nativeNfcTag_doReconnect ();
-        NXPLOG_API_D ("Format with Second Key");
-        status = EXTNS_MfcFormatTag(key2,sizeof(key2));
-        if (status == NFA_STATUS_OK)
-        {
-            NXPLOG_API_D ("%s:2nd try wait for completion", __FUNCTION__);
-            sem_wait (&sFormatSem);
-            status = sFormatOk ? NFA_STATUS_OK : NFA_STATUS_FAILED;
-        }
-        else
-        {
-            NXPLOG_API_E ("%s: error status=%u", __FUNCTION__, status);
-        }
-        sem_destroy (&sFormatSem);
+	if (status == NFA_STATUS_OK)
+	{
+	    sem_init (&sFormatSem, 0, 0);
+            NXPLOG_API_D ("Format with Second Key");
+            status = EXTNS_MfcFormatTag(key2,sizeof(key2));
+            if (status == NFA_STATUS_OK)
+            {
+                NXPLOG_API_D ("%s:2nd try wait for completion", __FUNCTION__);
+                sem_wait (&sFormatSem);
+                status = sFormatOk ? NFA_STATUS_OK : NFA_STATUS_FAILED;
+            }
+            else
+            {
+                NXPLOG_API_E ("%s: error status=%u", __FUNCTION__, status);
+            }
+            sem_destroy (&sFormatSem);
 
-        if(sFormatOk)
-        {
-            NXPLOG_API_D ("Format with Second Key Success");
-        }
-        else
-        {
-            NXPLOG_API_D ("Format with Second Key Failed");
-        }
+            if(sFormatOk)
+            {
+                NXPLOG_API_D ("Format with Second Key Success");
+            }
+            else
+            {
+                NXPLOG_API_D ("Format with Second Key Failed");
+            }
+	}
     }
 #endif
 
