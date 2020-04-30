@@ -455,10 +455,7 @@ static void nfaConnectionCallback (UINT8 connEvent, tNFA_CONN_EVT_DATA* eventDat
 
             if (eventData->status != NFA_STATUS_OK)
             {
-                if (gIsSelectingRfInterface)
-                {
-                    nativeNfcTag_doConnectStatus(false);
-                }
+                nativeNfcTag_doConnectStatus(false);
                 NfcTag::getInstance ().resetDiscInfo();
                 NXPLOG_API_D("%s: NFA_SELECT_RESULT_EVT error: status = %d", __FUNCTION__, eventData->status);
                 NFA_Deactivate (FALSE);
