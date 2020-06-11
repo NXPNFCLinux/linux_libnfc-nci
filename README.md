@@ -1,6 +1,6 @@
 linux_libnfc-nci
 ================
-Linux NFC stack for NCI based NXP NFC Controllers.
+Linux NFC stack for NCI based NXP NFC Controllers (PN7150, PN7120).
 
 Information about NXP NFC Controller can be found on [NXP website](https://www.nxp.com/products/identification-and-security/nfc/nfc-reader-ics:NFC-READER).
 
