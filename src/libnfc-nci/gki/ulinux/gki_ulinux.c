@@ -57,6 +57,10 @@
 #define SCHED_RR 2
 #define SCHED_BATCH 3
 
+#ifndef PTHREAD_MUTEX_RECURSIVE_NP
+#define PTHREAD_MUTEX_RECURSIVE_NP PTHREAD_MUTEX_RECURSIVE
+#endif
+
 /* Define the structure that holds the GKI variables
 */
 #if GKI_DYNAMIC_MEMORY == FALSE

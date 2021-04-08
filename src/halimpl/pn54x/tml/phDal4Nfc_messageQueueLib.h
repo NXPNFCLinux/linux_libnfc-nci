@@ -24,6 +24,10 @@
 #include <linux/ipc.h>
 #include <phNfcTypes.h>
 
+#ifndef key_t
+#define key_t __kernel_key_t
+#endif
+
 intptr_t phDal4Nfc_msgget(key_t key, int msgflg);
 void phDal4Nfc_msgrelease(intptr_t msqid);
 int phDal4Nfc_msgctl(intptr_t msqid, int cmd, void *buf);

@@ -45,7 +45,7 @@ static uint8_t bCurrentRetryCount = (2000 / PHTMLNFC_MAXTIME_RETRANSMIT) + 1;
 
 /* Initialize Context structure pointer used to access context structure */
 phTmlNfc_Context_t *gpphTmlNfc_Context = NULL;
-extern phTmlNfc_i2cfragmentation_t fragmentation_enabled = I2C_FRAGMENATATION_DISABLED;
+phTmlNfc_i2cfragmentation_t fragmentation_enabled = I2C_FRAGMENATATION_DISABLED;
 /* Local Function prototypes */
 static NFCSTATUS phTmlNfc_StartThread(void);
 static void phTmlNfc_CleanUp(void);
