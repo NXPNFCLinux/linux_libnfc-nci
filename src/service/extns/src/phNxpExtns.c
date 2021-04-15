@@ -25,7 +25,7 @@
 #include <phNxpLog.h>
 #include <phNxpConfig.h>
 
-phNxpExtns_Context_t         gphNxpExtns_Context;
+extern phNxpExtns_Context_t gphNxpExtns_MifareStd_Context;
 extern phFriNfc_NdefMap_t    *NdefMap;
 extern phNci_mfc_auth_cmd_t  gAuthCmdBuf;
 
@@ -71,21 +71,21 @@ NFCSTATUS EXTNS_Init(tNFA_DM_CBACK        *p_nfa_dm_cback,
         goto clean_and_return;
     }
 
-    gphNxpExtns_Context.p_dm_cback = p_nfa_dm_cback;
-    gphNxpExtns_Context.p_conn_cback = p_nfa_conn_cback;
+    gphNxpExtns_MifareStd_Context.p_dm_cback = p_nfa_dm_cback;
+    gphNxpExtns_MifareStd_Context.p_conn_cback = p_nfa_conn_cback;
 
     if( NFCSTATUS_SUCCESS != phNxpExtns_MfcModuleInit() )
     {
        NXPLOG_EXTNS_E("ERROR: MFC Module Init Failed");
        goto clean_and_return;
     }
-    gphNxpExtns_Context.Extns_status = EXTNS_STATUS_OPEN;
+    gphNxpExtns_MifareStd_Context.Extns_status = EXTNS_STATUS_OPEN;
 
     status = NFCSTATUS_SUCCESS;
     return status;
 
 clean_and_return:
-    gphNxpExtns_Context.Extns_status = EXTNS_STATUS_CLOSE;
+    gphNxpExtns_MifareStd_Context.Extns_status = EXTNS_STATUS_CLOSE;
     return status;
 }
 
@@ -101,7 +101,7 @@ clean_and_return:
 *******************************************************************************/
 void EXTNS_Close(void)
 {
-    gphNxpExtns_Context.Extns_status = EXTNS_STATUS_CLOSE;
+    gphNxpExtns_MifareStd_Context.Extns_status = EXTNS_STATUS_CLOSE;
     phNxpExtns_MfcModuleDeInit();
     return;
 }
@@ -461,7 +461,7 @@ static NFCSTATUS phNxpExtns_ProcessSysMessage (phLibNfc_Message_t *msg)
 {
     NFCSTATUS status = NFCSTATUS_SUCCESS;
 
-    if(gphNxpExtns_Context.Extns_status == EXTNS_STATUS_CLOSE)
+    if(gphNxpExtns_MifareStd_Context.Extns_status == EXTNS_STATUS_CLOSE)
     {
         return NFCSTATUS_FAILED;
     }
@@ -561,7 +561,7 @@ NFCSTATUS EXTNS_MfcRegisterNDefTypeHandler(tNFA_NDEF_CBACK *ndefHandlerCallback)
     NFCSTATUS status = NFCSTATUS_FAILED;
     if(NULL != ndefHandlerCallback)
     {
-        gphNxpExtns_Context.p_ndef_cback = ndefHandlerCallback;
+        gphNxpExtns_MifareStd_Context.p_ndef_cback = ndefHandlerCallback;
         status = NFCSTATUS_SUCCESS;
     }
 
@@ -575,32 +575,32 @@ NFCSTATUS EXTNS_MfcRegisterNDefTypeHandler(tNFA_NDEF_CBACK *ndefHandlerCallback)
 
 bool_t EXTNS_GetConnectFlag(void)
 {
-   return (gphNxpExtns_Context.ExtnsConnect);
+   return (gphNxpExtns_MifareStd_Context.ExtnsConnect);
 
 }
 void EXTNS_SetConnectFlag(bool_t flagval)
 {
-    gphNxpExtns_Context.ExtnsConnect = flagval;
+    gphNxpExtns_MifareStd_Context.ExtnsConnect = flagval;
 
 }
 bool_t EXTNS_GetDeactivateFlag(void)
 {
-   return (gphNxpExtns_Context.ExtnsDeactivate);
+   return (gphNxpExtns_MifareStd_Context.ExtnsDeactivate);
 
 }
 void EXTNS_SetDeactivateFlag(bool_t flagval)
 {
-    gphNxpExtns_Context.ExtnsDeactivate = flagval;
+    gphNxpExtns_MifareStd_Context.ExtnsDeactivate = flagval;
 
 }
 bool_t EXTNS_GetCallBackFlag(void)
 {
-   return (gphNxpExtns_Context.ExtnsCallBack);
+   return (gphNxpExtns_MifareStd_Context.ExtnsCallBack);
 
 }
 void EXTNS_SetCallBackFlag(bool_t flagval)
 {
-    gphNxpExtns_Context.ExtnsCallBack = flagval;
+    gphNxpExtns_MifareStd_Context.ExtnsCallBack = flagval;
 
 }
 NFCSTATUS EXTNS_GetPresenceCheckStatus(void)
