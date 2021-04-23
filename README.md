@@ -4,17 +4,17 @@ Linux NFC stack for NCI based NXP NFC Controllers (PN7150, PN7120).
 
 Information about NXP NFC Controller can be found on [NXP website](https://www.nxp.com/products/identification-and-security/nfc/nfc-reader-ics:NFC-READER).
 
-Further details about the stack [here](http://www.nxp.com/documents/application_note/AN11697.pdf).
+Further details about the stack [here](https://www.nxp.com/doc/AN11697).
 
 Release version
 ---------------
-R2.4 includes dynamic adaptation to the NFC Controller, multiple tags support, and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
+R2.4 includes dynamic adaptation to the NFC Controller, multiple tags support, and some bug fixes (refer to the [documentation](https://www.nxp.com/doc/AN11697) for more details).
 
-R2.2 includes support for alternative to pn5xx_i2c kernel driver and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
+R2.2 includes support for alternative to pn5xx_i2c kernel driver and some bug fixes (refer to the [documentation](https://www.nxp.com/doc/AN11697) for more details).
 
-R2.1 includes support for PN7150 NFC Controller IC and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
+R2.1 includes support for PN7150 NFC Controller IC and some bug fixes (refer to the [documentation](https://www.nxp.com/doc/AN11697) for more details).
 
-R2.0 includes LLCP1.3 support and some bug fixes (refer to the [documentation](http://www.nxp.com/documents/application_note/AN11697.pdf) for more details).
+R2.0 includes LLCP1.3 support and some bug fixes (refer to the [documentation](https://www.nxp.com/doc/AN11697) for more details).
 
 R1.0 is the first official release of Linux libnfc-nci stack
 
