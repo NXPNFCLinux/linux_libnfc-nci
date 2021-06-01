@@ -59,13 +59,13 @@ AC_ARG_ENABLE([debug],
 if test "x$enable_debug" = xyes; then
   dnl Remove all optimization flags from CFLAGS
   changequote({,})
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-O[0-9s]*//g'`
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-O[0-9s]*//g'`
-  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/-O[0-9s]*//g'`
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/[[:space:]]-O[0-9s]*//g'`
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/[[:space:]]-O[0-9s]*//g'`
+  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/[[:space:]]-O[0-9s]*//g'`
 
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-g[0-9]*//g'`
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-g[0-9]*//g'`
-  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/[[:space:]]-g[0-9]*//g'`
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/[[:space:]]-g[0-9]*//g'`
+  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/[[:space:]]-g[0-9]*//g'`
   changequote([,])
 
   CFLAGS="$CFLAGS -g -O0"
@@ -75,9 +75,9 @@ if test "x$enable_debug" = xyes; then
   CXXFLAGS="$CXXFLAGS -g -O0"
 else
   changequote({,})
-  CFLAGS=`echo "$CFLAGS" | $SED -e 's/-g[0-9]*//g'`
-  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/-g[0-9]*//g'`
-  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/-g[0-9]*//g'`
+  CFLAGS=`echo "$CFLAGS" | $SED -e 's/[[:space:]]-g[0-9]*//g'`
+  CPPFLAGS=`echo "$CPPFLAGS" | $SED -e 's/[[:space:]]-g[0-9]*//g'`
+  CXXFLAGS=`echo "$CXXFLAGS" | $SED -e 's/[[:space:]]-g[0-9]*//g'`
   changequote([,])
 fi
 
