@@ -104,6 +104,8 @@ int nativeNfcManager_getNumTags();
 void nativeNfcManager_registerHostCallback(nfcHostCardEmulationCallback_t *callback);
 void nativeNfcManager_deregisterHostCallback();
     
+INT32 nativeNfcManager_setConfig(UINT8 id, UINT8 length, UINT8 *p_data);
+
 /*******************************************************************************
 **
 ** Function:        nativeNfcManager_sendRawFrame

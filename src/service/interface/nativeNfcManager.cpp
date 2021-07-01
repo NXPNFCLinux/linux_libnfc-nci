@@ -1277,6 +1277,21 @@ TheEnd:
     pthread_exit(NULL);
 }
 
+INT32 nativeNfcManager_setConfig(UINT8 id, UINT8 length, UINT8 *p_data)
+{
+    tNFA_STATUS status = NFA_STATUS_FAILED;
+    gSyncMutex.lock();
+    if (!nativeNfcManager_isNfcActive())
+    {
+        NXPLOG_API_D ("%s: Nfc not initialized.", __FUNCTION__);
+        goto End;
+    }
+    status = NFA_SetConfig(id, length, p_data);
+End:
+    gSyncMutex.unlock();
+    return status;
+}
+
 /*******************************************************************************
 **
 ** Function:        nativeNfcManager_sendRawFrame

@@ -681,6 +681,13 @@ extern int nfcManager_selectNextTag(void);
 extern int nfcManager_getNumTags(void);
 
 /**
+* \brief Set NCI parameter
+* \return return 0 if success.
+*/
+extern int nfcManager_setConfig(unsigned char id, unsigned char length, unsigned char* p_data);
+
+
+/**
 * \brief Return FW version.
 * \return FW version on chip, return 0 if fails.
 */

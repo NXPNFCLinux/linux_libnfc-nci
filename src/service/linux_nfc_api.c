@@ -219,6 +219,11 @@ int nfcManager_getFwVersion ()
     return ((fwVer.rom_code_version & 0xFF ) << 16) | ((fwVer.major_version & 0xFF ) << 8) | (fwVer.minor_version & 0xFF);
 }
 
+int nfcManager_setConfig(unsigned char id, unsigned char length, unsigned char* p_data)
+{
+    return nativeNfcManager_setConfig(id, length, p_data);
+}
+
 int nfcSnep_registerClientCallback(nfcSnepClientCallback_t *client_callback)
 {
     return nativeNfcSnep_registerClientCallback(client_callback);
