@@ -44,6 +44,7 @@ extern "C"
 
 int GetStrValue(const char* name, char* p_value, unsigned long len);
 int GetNumValue(const char* name, void* p_value, unsigned long len);
+int SetValue(const char* name, void* p_value, unsigned long len);
 
 #ifdef __cplusplus
 };

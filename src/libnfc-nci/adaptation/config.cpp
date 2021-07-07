@@ -42,6 +42,7 @@
 #include <vector>
 #include <list>
 #include "phNxpLog.h"
+#include <unordered_map>
 
 #define LOG_TAG "NfcAdaptation"
 
@@ -54,6 +55,8 @@ const char transport_config_path[] = "/etc/";
 #define     IsStringValue       0x80000000
 
 using namespace::std;
+
+unordered_map<string, void*> confMap;
 
 class CNfcParam : public string
 {
@@ -706,6 +709,13 @@ CNfcParam::CNfcParam(const char* name,  unsigned long value) :
 *******************************************************************************/
 extern "C" int GetStrValue(const char* name, char* pValue, unsigned long l)
 {
+    std::string key = name;
+    std::unordered_map<std::string,void *>::const_iterator result = confMap.find(key);
+    if(result != confMap.end()){
+        memcpy(pValue, result->second, l);
+        return true;
+    }
+
     size_t len = l;
     CNfcConfig& rConfig = CNfcConfig::GetInstance();
 
@@ -728,6 +738,13 @@ extern "C" int GetNumValue(const char* name, void* pValue, unsigned long len)
 {
     if (!pValue)
         return false;
+
+    std::string key = name;
+    std::unordered_map<std::string,void *>::const_iterator result = confMap.find(key);
+    if(result != confMap.end()){
+        memcpy(pValue, result->second, len);
+        return true;
+    }
 
     CNfcConfig& rConfig = CNfcConfig::GetInstance();
     const CNfcParam* pParam = rConfig.find(name);
@@ -766,6 +783,29 @@ extern "C" int GetNumValue(const char* name, void* pValue, unsigned long len)
         return false;
     }
     return true;
+}
+
+/*******************************************************************************
+**
+** Function:    SetValue
+**
+** Description: API function for setting the value of a setting
+**
+** Returns:     none
+**
+*******************************************************************************/
+extern "C" int SetValue(const char* name, void* p_value, unsigned long len){
+
+    void* destValue = malloc(len);
+    memcpy(destValue, p_value, len);
+    std::string key = name;
+
+    std::unordered_map<std::string,void *>::const_iterator result = confMap.find(key);
+    if(result != confMap.end()){
+        free(result->second);
+    }
+    confMap[key] = destValue;
+    return 0;
 }
 
 /*******************************************************************************

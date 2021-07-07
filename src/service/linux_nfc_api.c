@@ -24,6 +24,7 @@
 #include "nativeNdef.h"
 #include "nfa_api.h"
 #include "nativeNfcLlcp.h"
+#include "nci_config.h"
 
 int ndef_readText(unsigned char *ndef_buff, unsigned int ndef_buff_length, char * out_text, unsigned int out_text_length)
 {
@@ -328,4 +329,8 @@ int nfcLlcp_ConnLessSendMessage(unsigned char* msg, unsigned int length)
 int nfcLlcp_ConnLessReceiveMessage(unsigned char* msg, unsigned int *length)
 {
     return nativeNfcLlcp_ConnLessReceiveMessage(msg, length);
+}
+
+int setConfigValue(const char* name, void* p_value, unsigned long len){
+    return SetValue(name, p_value, len);
 }

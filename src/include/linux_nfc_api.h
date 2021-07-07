@@ -827,6 +827,15 @@ extern int nfcLlcp_ConnLessSendMessage(unsigned char* msg, unsigned int length);
 */
 extern int nfcLlcp_ConnLessReceiveMessage(unsigned char* msg, unsigned int *length);
 
+/**
+* \brief Sets a config value as per libnfc-nci.conf.
+* \param Name:  Config Name.
+* \param p_value:  Pointer to config value.
+* \param len:  Config value length.
+* \return 0 if success, otherwise failed.
+*/
+extern int setConfigValue(const char* name, void* p_value, unsigned long len);
+
 
 #ifdef __cplusplus
 }
