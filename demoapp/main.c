@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright 2015-2021 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -587,6 +587,7 @@ int InitMode(int tag, int p2p, int hce)
 {
     int res = 0x00;
     
+    InitializeLogLevel();
     g_TagCB.onTagArrival = onTagArrival;
     g_TagCB.onTagDeparture = onTagDeparture;
         
@@ -603,7 +604,7 @@ int InitMode(int tag, int p2p, int hce)
     
     if(0x00 == res)
     {
-        res = nfcManager_doInitialize();
+        res = doInitialize();
         if(0x00 != res)
         {
             printf("NfcService Init Failed\n");
@@ -614,9 +615,9 @@ int InitMode(int tag, int p2p, int hce)
     {
         if(0x01 == tag)
         {
-            nfcManager_registerTagCallback(&g_TagCB);
+            registerTagCallback(&g_TagCB);
         }
-        
+#ifdef SNEP_ENABLED
         if(0x01 == p2p)
         {
             res = nfcSnep_registerClientCallback(&g_SnepClientCB);
@@ -625,6 +626,7 @@ int InitMode(int tag, int p2p, int hce)
                 printf("SNEP Client Register Callback Failed\n");
             }
         }
+#endif
     }
     
     if(0x00 == res && 0x01 == hce)
@@ -633,14 +635,16 @@ int InitMode(int tag, int p2p, int hce)
     }
     if(0x00 == res)
     {
-        nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, hce, 0);
+        doEnableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, hce, 0);
         if(0x01 == p2p)
         {
+#ifdef SNEP_ENABLED
             res = nfcSnep_startServer(&g_SnepServerCB);
             if(0x00 != res)
             {
                 printf("Start SNEP Server Failed\n");
             }
+#endif
         }
     }
     
@@ -650,12 +654,10 @@ int InitMode(int tag, int p2p, int hce)
 void DeinitPollMode()
 {
     nfcSnep_stopServer();
-    
-    nfcManager_disableDiscovery();
+    disableDiscovery();
     
     nfcSnep_deregisterClientCallback();
-    
-    nfcManager_deregisterTagCallback();
+    deregisterTagCallback();
     
     nfcHce_deregisterHceCallback();
     
@@ -684,7 +686,6 @@ int SnepPush(unsigned char* msgToPush, unsigned int len)
     {
         framework_UnlockMutex(g_SnepClientLock);
         res = nfcSnep_putMessage(msgToPush, len);
-        
         if(0x00 != res)
         {
             printf("\t\tPush Failed\n");
@@ -770,6 +771,7 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
     {
         ndefRawLen = NDEFinfo->current_ndef_length;
         NDEFContent = malloc(ndefRawLen * sizeof(unsigned char));
+        memset(NDEFContent,0x0,ndefRawLen * sizeof(unsigned char));
         res = nfcTag_readNdef(TagInfo->handle, NDEFContent, ndefRawLen, &lNDEFType);
     }
     else if (NULL != ndefRaw && 0x00 != ndefRawLen)
@@ -1154,19 +1156,20 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
     unsigned char MifareAuthCmd[] = {0x60U, 0x00 /*block*/, 0x02, 0x02, 0x02, 0x02, 0x00 /*key*/, 0x00 /*key*/, 0x00 /*key*/, 0x00 /*key*/ , 0x00 /*key*/, 0x00 /*key*/};
     unsigned char MifareAuthResp[255];
     unsigned char MifareReadCmd[] = {0x30U,  /*block*/ 0x00};
-    unsigned char MifareWriteCmd[] = {0xA2U,  /*block*/ 0x04, 0xFF, 0xFF, 0xFF, 0xFF};
+    unsigned char MifareWriteCmd[] = {0xA0U,  /*block*/ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55};
     unsigned char MifareResp[255];
-    
+
     unsigned char HCEReponse[255];
     short unsigned int HCEResponseLen = 0x00;
     int tag_count=0;
     int num_tags = 0;
-    
+
     nfc_tag_info_t TagInfo;
-    
+
     MifareAuthCmd[1] = block;
     memcpy(&MifareAuthCmd[6], key, 6);
     MifareReadCmd[1] = block;
+    MifareWriteCmd[1] = block;
     
     do
     {
@@ -1284,7 +1287,7 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                 else
                 {
                     printf("\t\tNDEF Content : NO, mode=%d, tech=%d\n", mode, TagInfo.technology);
-                    
+
                     if(0x03 == mode)
                     {
                          printf("\n\tFormating tag to NDEF prior to write ...\n");
@@ -1321,7 +1324,7 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                                 printf("%02X ", MifareAuthResp[i]);
                             }
                             printf("\n");
-                            
+
                             res = nfcTag_transceive(TagInfo.handle, MifareReadCmd, 2, MifareResp, 255, 500);
                             if(0x00 == res)
                             {
@@ -1335,6 +1338,21 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                                     printf("%02X ", MifareResp[i]);
                                 }
                                 printf("\n\n");
+
+                                res = nfcTag_transceive(TagInfo.handle, MifareWriteCmd, sizeof(MifareWriteCmd), MifareResp, 255, 500);
+                                if(0x00 == res)
+                                {
+                                    printf("\n\t\tRAW Tag transceive failed\n");
+                                }
+                                else
+                                {
+                                    printf("\n\t\tMifare Write command sent\n\t\tResponse : \n\t\t");
+                                    for(i = 0x00; i < (unsigned int)res; i++)
+                                    {
+                                        printf("%02X ", MifareResp[i]);
+                                    }
+                                    printf("\n\n");
+                                }
                             }
                         }
                     }
@@ -1385,14 +1403,14 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                         printf("\tWrite Tag Failed\n");
                     }
                 }
-                num_tags = nfcManager_getNumTags();
+                num_tags = getNumTags();
                 if(num_tags > 1)
                 {
                     tag_count++;
                     if (tag_count < num_tags)
                     {
                         printf("\tMultiple tags found, selecting next tag...\n");
-                        nfcManager_selectNextTag();
+                        selectNextTag();
                     }
                     else
                     {

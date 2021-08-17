@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright 2015-2021 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -22,10 +22,6 @@
 #include "data_types.h"
 #include "linux_nfc_api.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*******************************************************************************
 **
 ** Function:        nativeNfcTag_checkNdef
@@ -38,19 +34,19 @@ extern "C" {
 ** Returns:         TRUE if has NDEF message.
 **
 *******************************************************************************/
-extern BOOLEAN nativeNfcTag_checkNdef(UINT32 tagHandle, ndef_info_t *info);
+extern BOOLEAN nativeNfcTag_doCheckNdef(UINT32 tagHandle, ndef_info_t *info);
 
 /*******************************************************************************
 **
-** Function:        nativeNfcTag_doReadNdef
+** Function:        nativeNfcTag_doRead
 **
 ** Description:     Read the NDEF message on the tag.
 **                  tagHandle: tag handle.
 **
 ** Returns:         NDEF message.
 **
-*******************************************************************************/
-extern INT32 nativeNfcTag_doReadNdef(UINT32 tagHandle, UINT8* ndefBuffer,  UINT32 ndefBufferLength, nfc_friendly_type_t *friendly_ndef_type);
+******************************************************************************/
+extern INT32 nativeNfcTag_doRead(UINT8* ndefBuffer,  UINT32 ndefBufferLength, nfc_friendly_type_t *friendly_type);
 
 /*******************************************************************************
 **
@@ -62,7 +58,7 @@ extern INT32 nativeNfcTag_doReadNdef(UINT32 tagHandle, UINT8* ndefBuffer,  UINT3
 ** Returns:         0 if ok.
 **
 *******************************************************************************/
-extern INT32 nativeNfcTag_doWriteNdef(UINT32 tagHandle, UINT8* data,  UINT32 dataLength/*ndef message*/);
+extern INT32 nativeNfcTag_doWrite(UINT8* data,  UINT32 dataLength/*ndef message*/);
 
 /*******************************************************************************
 **
@@ -92,9 +88,5 @@ extern INT32 nativeNfcTag_doMakeReadonly (UINT32 tagHandle,UINT8 *key, UINT8 key
 extern INT32 nativeNfcTag_switchRF(UINT32 tagHandle, BOOLEAN isFrameRF);
 
 extern INT32 nativeNfcTag_doTransceive (UINT32 handle, UINT8* txBuffer, INT32 txBufferLen, UINT8* rxBuffer, INT32 rxBufferLen, UINT32 timeout);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __NATIVE_NFC_TAG__H__ */

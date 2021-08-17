@@ -23,12 +23,9 @@
 #include "nativeNfcManager.h"
 #include "SyncEvent.h"
 
-extern "C"
-{
-    #include "nfa_api.h"
-    #include "phNxpLog.h"
-    #include "nfa_cho_api.h"
-}
+#include "nfa_api.h"
+#include "phNxpLog.h"
+#include "nfa_cho_api.h"
 
 typedef enum {
 	HO_SERVER_IDLE = 0,
@@ -57,7 +54,7 @@ extern BOOLEAN isDiscoveryStarted();
 
 static void nativeNfcHandover_notifyHrRecieved(UINT8 *data, UINT32 length)
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sCallback && (NULL != sCallback->onHandoverRequestReceived))
         {
@@ -68,7 +65,7 @@ static void nativeNfcHandover_notifyHrRecieved(UINT8 *data, UINT32 length)
 
 static void nativeNfcHandover_notifyHsRecieved(UINT8 *data, UINT32 length)
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sCallback && (NULL != sCallback->onHandoverSelectReceived))
         {
@@ -178,7 +175,7 @@ INT32 nativeNfcHO_registerCallback(nfcHandoverCallback_t *callback)
     }
 
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -192,11 +189,11 @@ INT32 nativeNfcHO_registerCallback(nfcHandoverCallback_t *callback)
     }
     {
         SyncEventGuard guard (sNfaHORegEvent);
-        if(NFA_STATUS_OK != NFA_ChoRegister(TRUE, nfaHoCallback))
+        /*if(NFA_STATUS_OK != NFA_ChoRegister(TRUE, nfaHoCallback))
         {
             status = NFA_STATUS_FAILED;
             goto clean_and_return;
-        }
+        }*/
         sNfaHOStatus = HO_SERVER_IDLE;
         sNfaHORegEvent.wait();
         if (sNfaHOStatus != HO_SERVER_REGISTERED)
@@ -219,7 +216,7 @@ void nativeNfcHO_deregisterCallback()
 {
     NXPLOG_API_D ("%s:", __FUNCTION__);
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -233,7 +230,7 @@ void nativeNfcHO_deregisterCallback()
         startRfDiscovery (FALSE);
     }
 
-    NFA_ChoDeregister();
+    //NFA_ChoDeregister();
     if (sRfEnabled)
     {
         startRfDiscovery (TRUE);
@@ -271,7 +268,7 @@ INT32 nativeNfcHO_sendHs(UINT8 *msg, UINT32 length)
         NXPLOG_API_E ("%s: Not a valid Hs message\n", __FUNCTION__);
         return NFA_STATUS_FAILED;
      }
-    p_ndef = NDEF_RecGetPayload(msg, &ndef_len);
+    p_ndef = NDEF_RecGetPayload(msg, (uint32_t *)&ndef_len);
     if (p_ndef == NULL  || p_ndef[0] > NFA_CHO_VERSION)
     {
         NXPLOG_API_E ("%s: Unsupported Handover version\n", __FUNCTION__);
@@ -279,7 +276,7 @@ INT32 nativeNfcHO_sendHs(UINT8 *msg, UINT32 length)
     }
 
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -293,12 +290,12 @@ INT32 nativeNfcHO_sendHs(UINT8 *msg, UINT32 length)
     }
     {
         SyncEventGuard guard (sNfaHOSendMsgEvent);
-        if (NFA_STATUS_OK !=NFA_ChoSendHs(msg, length))
+        /*if (NFA_STATUS_OK !=NFA_ChoSendHs(msg, length))
         {
             NXPLOG_API_E ("%s: Handover select message send failed\n", __FUNCTION__);
             status = NFA_STATUS_FAILED;
             goto end_and_clean;
-        }
+        }*/
         sNfaHOSendMsgEvent.wait();
     }
 end_and_clean:
@@ -311,7 +308,7 @@ INT32 nativeNfcHO_sendSelectError(UINT8  error_reason, UINT32 error_data)
     tNFA_STATUS status = NFA_STATUS_OK;
     NXPLOG_API_D ("%s:", __FUNCTION__);
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         status = NFA_STATUS_FAILED;
@@ -325,11 +322,11 @@ INT32 nativeNfcHO_sendSelectError(UINT8  error_reason, UINT32 error_data)
     }
     {
         SyncEventGuard guard (sNfaHOSendMsgEvent);
-        if (NFA_STATUS_OK !=NFA_ChoSendSelectError(error_reason, error_data))
+        /*if (NFA_STATUS_OK !=NFA_ChoSendSelectError(error_reason, error_data))
         {
             status = NFA_STATUS_FAILED;
             goto end_and_clean;
-        }
+        }*/
         sNfaHOSendMsgEvent.wait();
     }
 end_and_clean:

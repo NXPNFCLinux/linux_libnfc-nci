@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright 2015-2021 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -20,12 +20,10 @@
 #include <malloc.h>
 #include "nativeNdef.h"
 
-extern "C"
-{
-    #include "phNxpLog.h"
-    #include "ndef_utils.h"
-    #include "nfa_api.h"
-}
+#include "phNxpLog.h"
+#include "ndef_utils.h"
+#include "nfa_api.h"
+#include "data_types.h"
 
 #define NFC_FORUM_HANDOVER_VERSION             0x12    /* version 1.2 */
 
@@ -116,7 +114,7 @@ static INT32 parseBluetoothAddress(UINT8* payload, UINT32 payload_length, UINT8 
 static tNFA_STATUS getDeviceCps(UINT8 *record, UINT8 *ref_name, UINT8 ref_len, nfc_handover_cps_t *power)
 {
     UINT8 *p_ac_record, *p_ac_payload;
-    UINT32 ac_payload_len;
+    uint32_t ac_payload_len;
     UINT8 cps = HANDOVER_CPS_UNKNOWN;
     UINT8 carrier_ref_name_len;
 
@@ -200,7 +198,7 @@ INT32 nativeNdef_createUri(char *uri, UINT8*outNdefBuff, UINT32 outBufferLen)
 {
     tNFA_STATUS status = NFA_STATUS_FAILED;
     INT32 uriLength = strlen(uri);
-    UINT32 current_size = 0;
+    uint32_t current_size = 0;
     INT32 i, prefixLength;
     NXPLOG_API_D ("%s: enter, uri = %s", __FUNCTION__, uri);
 
@@ -240,7 +238,7 @@ INT32 nativeNdef_createText(char *languageCode, char *text, UINT8*outNdefBuff, U
     tNFA_STATUS status = NFA_STATUS_FAILED;
     UINT32 textLength = strlen(text);
     UINT32 langCodeLength = 0;
-    UINT32 current_size = 0;
+    uint32_t current_size = 0;
     char *langCode = (char *)languageCode;
     NXPLOG_API_D ("%s: enter, text = %s", __FUNCTION__, text);
 
@@ -284,7 +282,7 @@ INT32 nativeNdef_createMime(char *mimeType, UINT8 *mimeData, UINT32 mimeDataLeng
                                                                 UINT8*outNdefBuff, UINT32 outBufferLen)
 {
     tNFA_STATUS status = NFA_STATUS_FAILED;
-    UINT32 current_size = 0;
+    uint32_t current_size = 0;
     UINT32 mimeTypeLength = strlen(mimeType);
     NXPLOG_API_D ("%s: enter, mime = %s", __FUNCTION__, mimeType);
 
@@ -313,7 +311,8 @@ INT32 nativeNdef_createHs(nfc_handover_cps_t cps, char *carrier_data_ref,
                                 UINT8 *ndefBuff, UINT32 ndefBuffLen, UINT8 *outBuff, UINT32 outBuffLen)
 {
     UINT8          *p_msg_ac = NULL;
-    UINT32          cur_size_ac = 0, max_size, cur_ndef_size = 0;
+    uint32_t          cur_size_ac = 0;
+    UINT32  max_size, cur_ndef_size = 0;
     if (ndefBuff == NULL || ndefBuffLen == 0 
             || outBuff == NULL || outBuffLen == 0
             || carrier_data_ref == NULL)
@@ -330,7 +329,7 @@ INT32 nativeNdef_createHs(nfc_handover_cps_t cps, char *carrier_data_ref,
     }
 
     NDEF_MsgInit (p_msg_ac, max_size, &cur_size_ac);
-    if (NDEF_OK != NDEF_MsgAddWktAc (p_msg_ac, max_size, &cur_size_ac,
+    if (NDEF_OK != NDEF_MsgAddWktAc (p_msg_ac, max_size,(UINT32 *) &cur_size_ac,
                        cps, carrier_data_ref, 0, NULL))
     {
         NXPLOG_API_E ("%s: Failed to create ac message", __FUNCTION__);
@@ -348,13 +347,14 @@ INT32 nativeNdef_createHs(nfc_handover_cps_t cps, char *carrier_data_ref,
     }
 
     /* Append Alternative Carrier Records */
-    if (NDEF_OK != NDEF_MsgAppendPayload (outBuff, outBuffLen, &cur_ndef_size,
+    if (NDEF_OK != NDEF_MsgAppendPayload (outBuff, outBuffLen, (uint32_t *) &cur_ndef_size,
                                         outBuff, p_msg_ac, cur_size_ac))
     {
         NXPLOG_API_E ("%s: Failed to append Alternative Carrier Record", __FUNCTION__);
         cur_ndef_size = 0;
         goto end_and_return;
     }
+#if 0
     /* Append Alternative Carrier Reference Data */
     if (NDEF_OK != NDEF_MsgAppendRec (outBuff, outBuffLen, &cur_ndef_size,
                                 ndefBuff, ndefBuffLen))
@@ -363,6 +363,7 @@ INT32 nativeNdef_createHs(nfc_handover_cps_t cps, char *carrier_data_ref,
         cur_ndef_size = 0;
         goto end_and_return;
     }
+#endif
 end_and_return:
     if (p_msg_ac)
     {
@@ -387,7 +388,7 @@ INT32 nativeNdef_readText( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outText, U
     {
         return -1;
     }
-    payload = NDEF_RecGetPayload((UINT8*)ndefBuff, &payloadLength);
+    payload = NDEF_RecGetPayload((UINT8*)ndefBuff, (uint32_t*)&payloadLength);
     if (payload == NULL)
     {
         return -1;
@@ -405,7 +406,7 @@ INT32 nativeNdef_readLang( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outLang, U
 {
     int langCodeLen;
     UINT8 *payload;
-    UINT32 payloadLength;
+    uint32_t payloadLength;
     UINT8 ndef_tnf;
     UINT8 *ndef_type;
     UINT8 ndef_typeLength;
@@ -448,7 +449,7 @@ INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT
     {
         return -1;
     }
-    payload = NDEF_RecGetPayload((UINT8*)ndefBuff, &payloadLength);
+    payload = NDEF_RecGetPayload((UINT8*)ndefBuff, (uint32_t *)&payloadLength);
     if (payload == NULL)
     {
         return -1;
@@ -500,7 +501,7 @@ INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request
     if (p_hr_record)
     {
         NXPLOG_API_E ("%s: Find Hr record", __FUNCTION__);
-        p_hr_payload = NDEF_RecGetPayload (p_hr_record, &hr_payload_len);
+        p_hr_payload = NDEF_RecGetPayload (p_hr_record,(uint32_t *) &hr_payload_len);
 
         if ((!p_hr_payload) || (hr_payload_len < 7))
         {
@@ -545,7 +546,7 @@ INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request
                 hrInfo->bluetooth.power_state = HANDOVER_CPS_UNKNOWN;
             }
         }
-        p_payload = NDEF_RecGetPayload(p_record, &record_payload_len);
+        p_payload = NDEF_RecGetPayload(p_record, (uint32_t *)&record_payload_len);
         if (p_payload == NULL)
         {
             NXPLOG_API_E ("%s: Failed to retreive NDEF payload", __FUNCTION__);
@@ -608,7 +609,7 @@ INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request
                 }
             }
 
-            p_payload = NDEF_RecGetPayload(p_record, &record_payload_len);
+            p_payload = NDEF_RecGetPayload(p_record, (uint32_t *)&record_payload_len);
             if (p_payload == NULL)
             {
                 NXPLOG_API_E ("%s: Failed to retreive NDEF payload", __FUNCTION__);
@@ -688,7 +689,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
     p_hs_record = NDEF_MsgGetFirstRecByType (ndefBuff, NDEF_TNF_WELLKNOWN, (UINT8*)RTD_Hs, sizeof(RTD_Hs));
     if (p_hs_record)
     {
-        p_hs_payload = NDEF_RecGetPayload (p_hs_record, &hs_payload_len);
+        p_hs_payload = NDEF_RecGetPayload (p_hs_record, (uint32_t *)&hs_payload_len);
 
         if ((!p_hs_payload) || (hs_payload_len < 7))
         {
@@ -739,7 +740,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
                 hsInfo->bluetooth.power_state = HANDOVER_CPS_UNKNOWN;
             }
         }
-        p_payload = NDEF_RecGetPayload(p_record, &record_payload_len);
+        p_payload = NDEF_RecGetPayload(p_record, (uint32_t *)&record_payload_len);
         if (p_payload == NULL)
         {
             NXPLOG_API_E ("%s: Failed to retreive NDEF payload", __FUNCTION__);
@@ -801,7 +802,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
                     hsInfo->bluetooth.power_state = HANDOVER_CPS_UNKNOWN;
                 }
             }
-            p_payload = NDEF_RecGetPayload(p_record, &record_payload_len);
+            p_payload = NDEF_RecGetPayload(p_record, (uint32_t *)&record_payload_len);
             if (p_payload == NULL)
             {
                 NXPLOG_API_E ("%s: Failed to retreive NDEF payload", __FUNCTION__);
@@ -859,7 +860,7 @@ INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_
                 hsInfo->wifi.power_state = HANDOVER_CPS_UNKNOWN;
             }
         }
-        p_payload = NDEF_RecGetPayload(p_record, &record_payload_len);
+        p_payload = NDEF_RecGetPayload(p_record, (uint32_t *)&record_payload_len);
         if (p_payload == NULL)
         {
             NXPLOG_API_E ("%s: Failed to retreive NDEF payload", __FUNCTION__);

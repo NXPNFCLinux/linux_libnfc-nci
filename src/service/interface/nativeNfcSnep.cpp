@@ -22,14 +22,10 @@
 #include "nativeNfcSnep.h"
 #include "nativeNfcManager.h"
 #include "SyncEvent.h"
-
-extern "C"
-{
-    #include "nfa_api.h"
-    #include "phNxpLog.h"
-    #include "nfa_snep_api.h"
-    #include "ndef_utils.h"
-}
+#include "nfa_api.h"
+#include "phNxpLog.h"
+#include "nfa_snep_api.h"
+#include "ndef_utils.h"
 
 static tNFA_HANDLE sSnepClientHandle = 0;
 static tNFA_HANDLE sSnepClientConnectionHandle = 0;
@@ -274,7 +270,7 @@ static void *snepServerThread(void *arg)
 
 void nativeNfcSnep_notifyClientActivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sClientCallback&& (NULL != sClientCallback->onDeviceArrival))
         {
@@ -285,7 +281,7 @@ void nativeNfcSnep_notifyClientActivated()
 
 void nativeNfcSnep_notifyClientDeactivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sClientCallback&& (NULL != sClientCallback->onDeviceDeparture))
         {
@@ -296,7 +292,7 @@ void nativeNfcSnep_notifyClientDeactivated()
 
 void nativeNfcSnep_notifyServerActivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sServerCallback&& (NULL != sServerCallback->onDeviceArrival))
         {
@@ -307,7 +303,7 @@ void nativeNfcSnep_notifyServerActivated()
 
 void nativeNfcSnep_notifyServerDeactivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         sSnepServerConnectionHandle = 0;
         if(sServerCallback&& (NULL != sServerCallback->onDeviceDeparture))
@@ -386,7 +382,7 @@ static void nativeNfcSnep_doPutCompleted (tNFA_STATUS status)
 static void nativeNfcSnep_doPutReceived (tNFA_HANDLE handle, UINT8 *data, UINT32 length)
 {
     NXPLOG_API_D ("%s: handle=0x%X, msg length =%d", __FUNCTION__, handle, length);
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         return;
     }
@@ -414,7 +410,7 @@ INT32 nativeNfcSnep_registerClientCallback(nfcSnepClientCallback_t *clientCallba
     tNFA_STATUS status = NFA_STATUS_FAILED;
     NXPLOG_API_D ("%s:", __FUNCTION__);
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -452,7 +448,7 @@ void nativeNfcSnep_deregisterClientCallback()
     NXPLOG_API_D ("%s:", __FUNCTION__);
 
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -488,7 +484,7 @@ INT32 nativeNfcSnep_startServer(nfcSnepServerCallback_t *serverCallback)
     }
 
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -562,7 +558,7 @@ void nativeNfcSnep_stopServer()
 {
     NXPLOG_API_D ("%s:", __FUNCTION__);
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -608,7 +604,7 @@ INT32 nativeNfcSnep_putMessage(UINT8* msg, UINT32 length)
         return NFA_STATUS_FAILED;
     }
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         status = NFA_STATUS_FAILED;

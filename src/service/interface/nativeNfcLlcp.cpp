@@ -23,14 +23,10 @@
 #include "nativeNfcLlcp.h"
 #include "nativeNfcManager.h"
 #include "SyncEvent.h"
-
-extern "C"
-{
-    #include "nfa_api.h"
-    #include "nfa_p2p_api.h"
-    #include "phNxpLog.h"
-    #include "ndef_utils.h"
-}
+#include "nfa_api.h"
+#include "nfa_p2p_api.h"
+#include "phNxpLog.h"
+#include "ndef_utils.h"
 
 typedef enum {
     LLCP_SERVER_IDLE = 0,
@@ -77,24 +73,24 @@ static LLCP_SERVER_STATE sLlcpServerState = LLCP_SERVER_IDLE;
 static tNFA_HANDLE sLlcpConnLessConnectedHandle = 0;
 static SyncEvent sNfaLlcpConnLessReadEvent;
 static tNFA_HANDLE sLlcpConnLessHandle = 0;
-static BOOLEAN sRfEnabled;
-static BOOLEAN bClientReadState = FALSE;
-static BOOLEAN bServerReadState = FALSE;
+static bool sRfEnabled;
+static bool bClientReadState = FALSE;
+static bool bServerReadState = FALSE;
 static UINT8 bDestSap = 0x00;
 static UINT8 bLlcpReadData[LLCP_MAX_DATA_SIZE];
-static UINT32 dwLlcpReadLength = 0x00;
-static BOOLEAN blMoreDataRemaining = FALSE;
+static uint32_t dwLlcpReadLength = 0x00;
+static bool blMoreDataRemaining = FALSE;
 static SyncEvent sNfaLlcpSdpEvt;
 
 static UINT8 bLlcpClientReadData[LLCP_MAX_DATA_SIZE];
 static UINT32 dwLlcpClientReadLength = 0x00;
-static BOOLEAN blClientDataRemaining = FALSE;
+static bool blClientDataRemaining = FALSE;
 
 
 extern void nativeNfcTag_registerNdefTypeHandler ();
 extern void nativeNfcTag_deregisterNdefTypeHandler ();
 extern void startRfDiscovery (BOOLEAN isStart);
-extern BOOLEAN isDiscoveryStarted();
+extern bool isDiscoveryStarted();
 static void nfaLlcpClientCallback (tNFA_P2P_EVT LlcpEvent, tNFA_P2P_EVT_DATA *eventData);
 
 INT32 nativeNfcLlcp_ConnLessRegisterClientCallback(nfcllcpConnlessClientCallback_t *clientCallback)
@@ -105,7 +101,7 @@ INT32 nativeNfcLlcp_ConnLessRegisterClientCallback(nfcllcpConnlessClientCallback
     NXPLOG_API_D ("%s:", __FUNCTION__);
 
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();
@@ -146,7 +142,7 @@ INT32 nativeNfcLlcp_ConnLessRegisterClientCallback(nfcllcpConnlessClientCallback
 
 void nativeNfcLlcp_notifyClientActivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sClientCallback&& (NULL != sClientCallback->onDeviceArrival))
         {
@@ -158,7 +154,7 @@ void nativeNfcLlcp_notifyClientActivated()
 
 void nativeNfcLlcp_notifyServerActivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sServerCallback&& (NULL != sServerCallback->onDeviceArrival))
         {
@@ -170,7 +166,7 @@ void nativeNfcLlcp_notifyServerActivated()
 
 void nativeNfcLlcp_notifyServerDeactivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sServerCallback&& (NULL != sServerCallback->onDeviceDeparture))
         {
@@ -181,7 +177,7 @@ void nativeNfcLlcp_notifyServerDeactivated()
 
 void nativeNfcLlcp_notifyClientDeactivated()
 {
-    if (nativeNfcManager_isNfcActive())
+    if (nfcManager_isNfcActive())
     {
         if(sClientCallback&& (NULL != sClientCallback->onDeviceDeparture))
         {
@@ -214,7 +210,7 @@ static void nativeNfcLlcp_doClientReadCompleted (tNFA_STATUS status)
 static void nativeNfcLlcp_doServerReadCompleted (tNFA_STATUS status)
 {
     NXPLOG_API_D ("%s: status=0x%X", __FUNCTION__, status);
-    if(nativeNfcManager_isNfcActive())
+    if(nfcManager_isNfcActive())
     {
         if(sServerCallback&& (NULL != sServerCallback->onMessageReceived))
         {
@@ -389,7 +385,7 @@ INT32 nativeNfcLlcp_ConnLessStartServer(nfcllcpConnlessServerCallback_t *serverC
         return NFA_STATUS_FAILED;
     }
     gSyncMutex.lock();
-    if (!nativeNfcManager_isNfcActive())
+    if (!nfcManager_isNfcActive())
     {
         NXPLOG_API_E ("%s: Nfc not initialized.", __FUNCTION__);
         gSyncMutex.unlock();

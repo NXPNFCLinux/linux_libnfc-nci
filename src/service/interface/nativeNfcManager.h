@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright 2015-2021 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -22,20 +22,20 @@
 #include "data_types.h"
 #include "linux_nfc_api.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 /*******************************************************************************
 **
-** Function:        isNfcActive
+** Function:        nfcManager_isNfcActive
 **
 ** Description:     Used externaly to determine if NFC is active or not.
 **
 ** Returns:         'true' if the NFC stack is running, else 'false'.
 **
 *******************************************************************************/
-BOOLEAN nativeNfcManager_isNfcActive();
+BOOLEAN nfcManager_isNfcActive();
 
 /*******************************************************************************
 **
@@ -48,19 +48,19 @@ BOOLEAN nativeNfcManager_isNfcActive();
 ** Returns:         True if ok.
 **
 *******************************************************************************/
-INT32 nativeNfcManager_doInitialize ();
+bool nfcManager_doInitialize ();
 
 
 /*******************************************************************************
 **
-** Function:        nfcManager_doDeinitialize
+** Function:        doDeinitialize
 **
 ** Description:     Turn off NFC.
 **
 ** Returns:         0 if ok.
 **
 *******************************************************************************/
-INT32 nativeNfcManager_doDeinitialize ();
+INT32 nfcManager_doDeinitialize ();
 
 
 /*******************************************************************************
@@ -69,41 +69,41 @@ INT32 nativeNfcManager_doDeinitialize ();
 **
 ** Description:     Start polling and listening for devices.
 **                  technologies_mask: the bitmask of technologies for which to enable discovery
-**                  reader mode: 
+**                  reader mode:
 **                  enable_host_routing:
 **                  restart:
 **
 ** Returns:         0 if ok, error code otherwise
 **
 *******************************************************************************/
-INT32 nativeNfcManager_enableDiscovery (INT32 technologies_mask,
-    BOOLEAN reader_mode, INT32 enable_host_routing, BOOLEAN restart);
+INT32 nfcManager_enableDiscovery (INT32 technologies_mask,
+    BOOLEAN enable_lptd, BOOLEAN reader_mode, INT32 enable_host_routing, BOOLEAN enable_p2p, BOOLEAN restart);
 
 
 /*******************************************************************************
 **
-** Function:        nfcManager_disableDiscovery
+** Function:        disableDiscovery
 **
 ** Description:     Stop polling and listening for devices.
 **
 ** Returns:         0 if ok, error code otherwise
 **
 *******************************************************************************/
-INT32 nativeNfcManager_disableDiscovery ();
+INT32 nfcManager_disableDiscovery ();
 
-void nativeNfcManager_registerTagCallback(nfcTagCallback_t *nfcTagCb);
+void nfcManager_registerTagCallback(nfcTagCallback_t *nfcTagCb);
 
-void nativeNfcManager_deregisterTagCallback();
+void nfcManager_deregisterTagCallback();
 
-int nativeNfcManager_selectNextTag();
+int nfcManager_selectNextTag();
 
 int nativeNfcManager_checkNextProtocol();
 
-int nativeNfcManager_getNumTags();
+int nfcManager_getNumTags();
 
-void nativeNfcManager_registerHostCallback(nfcHostCardEmulationCallback_t *callback);
-void nativeNfcManager_deregisterHostCallback();
-    
+void nfcManager_registerHostCallback(nfcHostCardEmulationCallback_t *callback);
+void nfcManager_deregisterHostCallback();
+
 /*******************************************************************************
 **
 ** Function:        nativeNfcManager_sendRawFrame
@@ -113,7 +113,7 @@ void nativeNfcManager_deregisterHostCallback();
 ** Returns:         True if ok.
 **
 *******************************************************************************/
-INT32 nativeNfcManager_sendRawFrame (UINT8 *buf, UINT32 bufLen);
+bool nfcManager_sendRawFrame (UINT8 *buf, UINT32 bufLen);
 
 /*******************************************************************************
 **
@@ -126,7 +126,7 @@ INT32 nativeNfcManager_sendRawFrame (UINT8 *buf, UINT32 bufLen);
 ** Returns:         Handle retrieve from RoutingManager.
 **
 *******************************************************************************/
-void nfcManager_registerT3tIdentifier(UINT8 *t3tId, UINT8 t3tIdsize);
+int nfcManager_doRegisterT3tIdentifier(UINT8 *t3tId, UINT8 t3tIdsize);
 
 /*******************************************************************************
 **
@@ -139,8 +139,24 @@ void nfcManager_registerT3tIdentifier(UINT8 *t3tId, UINT8 t3tIdsize);
 *******************************************************************************/
 void nfcManager_doDeregisterT3tIdentifier(void);
 
-#ifdef __cplusplus
-}
-#endif
+/*******************************************************************************
+**
+** Function:        nativeNfcManager_setConfig
+**
+** Description:     NCI SET CONFIG command.
+**
+** Returns:         0 if ok, error code otherwise.
+**
+*******************************************************************************/
+INT32 nativeNfcManager_setConfig(UINT8 id, UINT8 length, UINT8 *p_data);
+
+int t4tNfceeManager_doWriteT4tData(UINT8 *fileId,
+                                    UINT8 *ndefBuffer, int ndefBufferLength);
+
+int t4tNfceeManager_doReadT4tData(UINT8 *fileId,
+                                    UINT8 *ndefBuffer, int *ndefBufferLength);
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif // __NATIVE_NFCMANAGER_TAG__H__

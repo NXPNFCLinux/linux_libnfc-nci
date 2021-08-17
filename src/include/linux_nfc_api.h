@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright (C) 2015 NXP Semiconductors
+ *  Copyright 2015-2021 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 #ifndef __LINUX_NFC_API__H__
 #define __LINUX_NFC_API__H__
+
+#include "linux_nfc_api_compatibility.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +98,7 @@ typedef unsigned char tNFC_PROTOCOL;
  *  \brief setting this flag allows host application enable HCE
  */
 #define FLAG_HCE_ENABLE_HCE         0x01
-
+void InitializeLogLevel(void);
 /**
  *  \brief friendly NDEF Type Name
  */
@@ -624,19 +626,19 @@ extern int nfcTag_transceive (unsigned int handle, unsigned char *tx_buffer, int
 * \brief initialize nfc stack.
 * \return 0 if success, otherwise failed.
 */
-extern int nfcManager_doInitialize ();
+extern int doInitialize ();
 
 /**
 * \brief de-initialize nfc stack.
 * \return 0 if success, otherwise failed.
 */
-extern int nfcManager_doDeinitialize ();
+extern int doDeinitialize ();
 
 /*
 * \brief Check if nfc stack is running or not.
 * \return 1 if running, otherwise 0.
 */
-extern int nfcManager_isNfcActive();
+extern int isNfcActive();
 
 /**
 * \brief Start nfc discovery.
@@ -646,45 +648,52 @@ extern int nfcManager_isNfcActive();
 * \param restart:  indicates if force restart discovery
 * \return 0 if success, otherwise failed.
 */
-extern void nfcManager_enableDiscovery (int technologies_masks,
+extern void doEnableDiscovery (int technologies_masks,
                         int reader_only_mode, int enable_host_routing, int restart);
 
 /**
 * \brief Stop polling and listening for devices.
 * \return None
 */
-extern void nfcManager_disableDiscovery ();
+extern void disableDiscovery ();
 
 /**
 * \brief Register a tag callback functions.
 * \param callback:  tag callback functions.
 * \return None
 */
-extern void nfcManager_registerTagCallback(nfcTagCallback_t *callback);
+extern void registerTagCallback(nfcTagCallback_t *callback);
 
 /**
 * \brief Deregister a tag callback functions.
 * \return None
 */
-extern void nfcManager_deregisterTagCallback();
+extern void deregisterTagCallback();
 
 /**
 * \brief Select the next Tag present in the Field.
 * \return 0 if success, otherwise failed.
 */
-extern int nfcManager_selectNextTag(void);
+extern int selectNextTag(void);
 
 /**
 * \brief To get the number of Tags Discovered.
 * \return Number of Tags Discovered
 */
-extern int nfcManager_getNumTags(void);
+extern int getNumTags(void);
+
+/**
+* \brief check the next valid protocol.
+* \return Index of the next tag protocol,
+*           -1 if no valid index
+*/
+extern int checkNextProtocol(void);
 
 /**
 * \brief Return FW version.
 * \return FW version on chip, return 0 if fails.
 */
-extern int nfcManager_getFwVersion();
+extern int getFwVersion();
 
 /**
 * \brief Register a callback functions for snep client.
@@ -747,7 +756,7 @@ extern int nfcHce_sendCommand(unsigned char* command, unsigned int command_lengt
 * \param length:  T3T identifier size.
 * \return 0 if success, otherwise failed.
 */
-extern void nfcHce_registerT3tIdentifier (unsigned char *Id, unsigned char Idsize);
+extern int nfcHce_registerT3tIdentifier (unsigned char *Id, unsigned char Idsize);
 
 /**
 * \brief Register the handover callback.
@@ -820,7 +829,22 @@ extern int nfcLlcp_ConnLessSendMessage(unsigned char* msg, unsigned int length);
 */
 extern int nfcLlcp_ConnLessReceiveMessage(unsigned char* msg, unsigned int *length);
 
+/**
+* \brief Set NCI parameter
+* \return return 0 if success.
+*/
+extern int nfcManager_setConfig(unsigned char id, unsigned char length, unsigned char* p_data);
 
+/**
+* \brief Write NDEF message in T4T NFCC in Wired Mode
+* \return return 0 if success.
+*/
+extern int doWriteT4tData(unsigned char* command, unsigned char *ndef_buffer, int ndef_buffer_length);
+/**
+* \brief Read NDEF message in T4T NFCC in Wired Mode
+* \return return 0 if success.
+*/
+extern int doReadT4tData(unsigned char* command, unsigned char *ndef_buffer, int *ndef_buffer_length);
 #ifdef __cplusplus
 }
 #endif
