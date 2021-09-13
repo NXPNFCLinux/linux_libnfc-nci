@@ -1,16 +1,18 @@
 var searchData=
 [
-  ['wagcdifferentialwithopen1',['wAgcDifferentialWithOpen1',['../structnfc_factory___antenna___st___resp__t.html#a0a22b9d8ec7a8d152eb2356d00744f6d',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcdifferentialwithopen2',['wAgcDifferentialWithOpen2',['../structnfc_factory___antenna___st___resp__t.html#a3fa226f2bbaa63ddee5114e0cf3fc484',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcdifferentialwithopentolerance1',['wAgcDifferentialWithOpenTolerance1',['../structnfc_factory___antenna___st___resp__t.html#a77fc8e9a494cd41577488921bcc09471',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcdifferentialwithopentolerance2',['wAgcDifferentialWithOpenTolerance2',['../structnfc_factory___antenna___st___resp__t.html#a38b804f09a2f17a338929b8c180ba7b7',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcvalue',['wAgcValue',['../structnfc_factory___antenna___st___resp__t.html#aedd84f76c2867bb478ca1efb159b579b',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcvaluetolerance',['wAgcValueTolerance',['../structnfc_factory___antenna___st___resp__t.html#a1692a5500b2d10047572d484ca7bb5c2',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcvaluewithfixednfcld',['wAgcValuewithfixedNFCLD',['../structnfc_factory___antenna___st___resp__t.html#a4ae0eca169937000e789fd3c9a931bbf',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wagcvaluewithfixednfcldtolerance',['wAgcValuewithfixedNFCLDTolerance',['../structnfc_factory___antenna___st___resp__t.html#ac1e52d8d0d3e54c75322fc4f295f6163',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wifi',['wifi',['../structnfc__handover__request__t.html#a2b3132e8cfe22383656949f52ecc426d',1,'nfc_handover_request_t::wifi()'],['../structnfc__handover__select__t.html#a53e2e99c6ef26c85506a7cbbf183562b',1,'nfc_handover_select_t::wifi()']]],
-  ['wtxdomeasuredrangemax',['wTxdoMeasuredRangeMax',['../structnfc_factory___antenna___st___resp__t.html#a6608e659575d07f604f5fcc960e174e7',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wtxdomeasuredrangemin',['wTxdoMeasuredRangeMin',['../structnfc_factory___antenna___st___resp__t.html#a91d114778912b4ab2859201513113eaf',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wtxdomeasuredtolerance',['wTxdoMeasuredTolerance',['../structnfc_factory___antenna___st___resp__t.html#a5ebf2d59db33ec18eefebfa25e5d84ea',1,'nfcFactory_Antenna_St_Resp_t']]],
-  ['wtxdorawvalue',['wTxdoRawValue',['../structnfc_factory___antenna___st___resp__t.html#a9e104ecfc95b37892d939e03f16caf22',1,'nfcFactory_Antenna_St_Resp_t']]]
+  ['target_5ftype_5ffelica_139',['TARGET_TYPE_FELICA',['../linux__nfc__api_8h.html#ab777e59956b9a4241dc9e0ebc4ac892a',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fiso14443_5f3a_140',['TARGET_TYPE_ISO14443_3A',['../linux__nfc__api_8h.html#ab5ef14a4bbe39ca91b84f9806a80905f',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fiso14443_5f3a_5f3b_141',['TARGET_TYPE_ISO14443_3A_3B',['../linux__nfc__api_8h.html#a7a63f883dd82c4d397c577932e411147',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fiso14443_5f3b_142',['TARGET_TYPE_ISO14443_3B',['../linux__nfc__api_8h.html#aa9bf0125db1eccd1abeac27268ed784c',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fiso14443_5f4_143',['TARGET_TYPE_ISO14443_4',['../linux__nfc__api_8h.html#af56d104a6280d313a7af87f6bd506dd9',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fiso15693_144',['TARGET_TYPE_ISO15693',['../linux__nfc__api_8h.html#a15d24472b7f54cc02ca3a45581caadf5',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fkovio_5fbarcode_145',['TARGET_TYPE_KOVIO_BARCODE',['../linux__nfc__api_8h.html#ac8b86ebf047a536f88f8278543dd7353',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fmifare_5fclassic_146',['TARGET_TYPE_MIFARE_CLASSIC',['../linux__nfc__api_8h.html#a264ed89b38167610d72872342c067147',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fmifare_5ful_147',['TARGET_TYPE_MIFARE_UL',['../linux__nfc__api_8h.html#a6ad905f83acdbdfdff0fb55c44426987',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fndef_148',['TARGET_TYPE_NDEF',['../linux__nfc__api_8h.html#a0000dadcbe739099a795c891aca5bca5',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5fndef_5fformatable_149',['TARGET_TYPE_NDEF_FORMATABLE',['../linux__nfc__api_8h.html#ad7718e7c754ad319ddba0728dd8a2e50',1,'linux_nfc_api.h']]],
+  ['target_5ftype_5funknown_150',['TARGET_TYPE_UNKNOWN',['../linux__nfc__api_8h.html#a520342ae6a088fef28b07683d262424b',1,'linux_nfc_api.h']]],
+  ['technology_151',['technology',['../structnfc__tag__info__t.html#ae86261692eb29257980f646402880367',1,'nfc_tag_info_t']]],
+  ['tnfc_5fprotocol_152',['tNFC_PROTOCOL',['../linux__nfc__api_8h.html#a5bbdb860d0cd45c3077e27bbcf0abc5f',1,'linux_nfc_api.h']]],
+  ['type_153',['type',['../structnfc__btoob__pairing__t.html#adba44a81c741d47f12c4bd3ea049434b',1,'nfc_btoob_pairing_t']]]
 ];

@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['uid',['uid',['../structnfc__tag__info__t.html#ac78a89e30460f5223a824f75e82d4170',1,'nfc_tag_info_t']]],
-  ['uid_5flength',['uid_length',['../structnfc__tag__info__t.html#a0c957c67c5b182ee182741cbd827fc11',1,'nfc_tag_info_t']]]
+  ['selectnexttag_136',['selectNextTag',['../linux__nfc__api_8h.html#a7cd163788c5656a0da898804210191ee',1,'linux_nfc_api.h']]],
+  ['ssid_137',['ssid',['../structnfc__wifi__pairing__t.html#a2550dd60e0a3c28016bcf00211a40d76',1,'nfc_wifi_pairing_t']]],
+  ['ssid_5flength_138',['ssid_length',['../structnfc__wifi__pairing__t.html#a0b5d0473b67e95de4974425c55d88fdb',1,'nfc_wifi_pairing_t']]]
 ];
