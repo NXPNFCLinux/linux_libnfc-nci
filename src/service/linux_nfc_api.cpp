@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright 2015-2021 NXP
+ *  Copyright 2015-2021,2022 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -105,6 +105,13 @@ int nfcTag_isNdef(unsigned int handle, ndef_info_t *info)
 {
     int ret;
     ret = nativeNfcTag_doCheckNdef(handle, info);
+    return ret;
+}
+
+int nfcTag_doHandleReconnect(unsigned int handle)
+{
+    int ret;
+    ret = nativeNfcTag_doHandleReconnect(handle);
     return ret;
 }
 
@@ -216,6 +223,7 @@ void deregisterTagCallback()
 {
     nfcManager_deregisterTagCallback();
 }
+
 
 int selectNextTag()
 {

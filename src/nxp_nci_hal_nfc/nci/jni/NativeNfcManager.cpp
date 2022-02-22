@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 The Android Open Source Project
+ * Copyright (C) 2012,2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 /******************************************************************************
  *
- *  The original Work has been changed by NXP Semiconductors.
+ *  The original Work has been changed by NXP.
  *
  *  Copyright 2020-2021 NXP
  *
@@ -128,7 +128,11 @@ extern void nativeNfcTag_releasePresenceCheck();
 bool gActivated = false;
 SyncEvent gDeactivatedEvent;
 SyncEvent sNfaSetPowerSubState;
+#ifdef LINUX
+bool legacy_mfc_reader = false;
+#else
 bool legacy_mfc_reader = true;
+#endif
 #ifndef LINUX
 namespace android {
 #endif
@@ -433,11 +437,7 @@ static void nfaConnectionCallback(uint8_t connEvent,
           __func__, gIsSelectingRfInterface, sIsDisabling);
       uint8_t activatedProtocol =
           (tNFA_INTF_TYPE)eventData->activated.activate_ntf.protocol;
-      if (NFC_PROTOCOL_T5T == activatedProtocol &&
-          NfcTag::getInstance().getNumDiscNtf()) {
-        /* T5T doesn't support multiproto detection logic */
-        NfcTag::getInstance().setNumDiscNtf(0);
-      }
+
       if ((eventData->activated.activate_ntf.protocol !=
            NFA_PROTOCOL_NFC_DEP) &&
           (!isListenMode(eventData->activated))) {

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Linux NFC User Mode Stack: C:/PN7160_Doxygen_Doc/libnfc-nci-linux/libnfc-nci/src/include/linux_nfc_api.h File Reference</title>
+<title>Linux NFC User Mode Stack: linux_nfc_api.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -24,6 +24,7 @@
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">Linux NFC User Mode Stack
    </div>
+   <div id="projectbrief">Linux NFC User Mode Stack Documentation</div>
   </td>
  </tr>
  </tbody>
@@ -60,10 +61,6 @@ $(function() {
 </iframe>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="dir_9de36964c70e7d7840eeecc286b1e43f.html">PN7160_Doxygen_Doc</a></li><li class="navelem"><a class="el" href="dir_ec5bdf2f063cd13a0d1d8aca7f8e2635.html">libnfc-nci-linux</a></li><li class="navelem"><a class="el" href="dir_b9fbe2b0c6fd787ec4c9740ecb8cd92c.html">libnfc-nci</a></li><li class="navelem"><a class="el" href="dir_2c9cd04c774acb8f1aba77c806f5de7d.html">src</a></li><li class="navelem"><a class="el" href="dir_3949347cc5cd3fdac4a04ba56a2a30f4.html">include</a></li>  </ul>
-</div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
@@ -277,6 +274,8 @@ Functions</h2></td></tr>
 <tr class="memitem:a0a7693b35d119c95aee0a4f9f36aa10d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="linux__nfc__api_8h.html#a0a7693b35d119c95aee0a4f9f36aa10d">nfcTag_isNdef</a> (unsigned int handle, <a class="el" href="structndef__info__t.html">ndef_info_t</a> *info)</td></tr>
 <tr class="memdesc:a0a7693b35d119c95aee0a4f9f36aa10d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if the tag is Ndef formated.  <a href="linux__nfc__api_8h.html#a0a7693b35d119c95aee0a4f9f36aa10d">More...</a><br /></td></tr>
 <tr class="separator:a0a7693b35d119c95aee0a4f9f36aa10d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab71ef6a24ac012c63369c75b02f65de6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="linux__nfc__api_8h.html#ab71ef6a24ac012c63369c75b02f65de6">nfcTag_doHandleReconnect</a> (unsigned int handle)</td></tr>
+<tr class="separator:ab71ef6a24ac012c63369c75b02f65de6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a618b5c17b1e7f8cae3104f6a73027298"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="linux__nfc__api_8h.html#a618b5c17b1e7f8cae3104f6a73027298">nfcTag_readNdef</a> (unsigned int handle, unsigned char *ndef_buffer, unsigned int ndef_buffer_length, <a class="el" href="linux__nfc__api_8h.html#a76218cd68b3ea6ea520a9800cd9b55d2">nfc_friendly_type_t</a> *friendly_ndef_type)</td></tr>
 <tr class="memdesc:a618b5c17b1e7f8cae3104f6a73027298"><td class="mdescLeft">&#160;</td><td class="mdescRight">Read ndef message from tag.  <a href="linux__nfc__api_8h.html#a618b5c17b1e7f8cae3104f6a73027298">More...</a><br /></td></tr>
 <tr class="separator:a618b5c17b1e7f8cae3104f6a73027298"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -2455,6 +2454,25 @@ Functions</h2></td></tr>
 
 <p>Stop senp server. </p>
 <dl class="section return"><dt>Returns</dt><dd>None </dd></dl>
+
+</div>
+</div>
+<a id="ab71ef6a24ac012c63369c75b02f65de6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab71ef6a24ac012c63369c75b02f65de6">&#9670;&nbsp;</a></span>nfcTag_doHandleReconnect()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int nfcTag_doHandleReconnect </td>
+          <td>(</td>
+          <td class="paramtype">unsigned int&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>\reconnect to the tag \get protocol parameter sCurrentConnectedTargetProtocol updated. \reselect the tag </p><dl class="section return"><dt>Returns</dt><dd>0 if reselection is success. </dd></dl>
 
 </div>
 </div>

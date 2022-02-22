@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright 2015-2021 NXP
+ *  Copyright 2015-2021,2022 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License")
  *  you may not use this file except in compliance with the License.
@@ -555,6 +555,16 @@ extern int ndef_createHandoverSelect(nfc_handover_cps_t cps, char *carrier_data_
 *
 */
 extern int nfcTag_isNdef(unsigned int handle, ndef_info_t *info);
+
+
+/**
+* \reconnect to the tag
+* \get protocol parameter sCurrentConnectedTargetProtocol updated.
+* \reselect the tag
+* \return 0 if reselection is success.
+*
+*/
+extern int nfcTag_doHandleReconnect(unsigned int handle);
 
 /**
 * \brief Read ndef message from tag.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 The Android Open Source Project
+ * Copyright (C) 2012,2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -685,10 +685,18 @@ void nativeNfcTag_doDeactivateStatus(int status) {
 ** Returns:         Must return NXP status code, which NFC service expects.
 **
 *******************************************************************************/
+#ifdef LINUX
+static int32_t nativeNfcTag_doConnect(UINT32 tagHandle) {
+  int i = tagHandle;
+  DLOG_IF(INFO, nfc_debug_enabled)
+      << StringPrintf("%s: targetHandle = %d", __func__, tagHandle);
+#else
 static jint nativeNfcTag_doConnect(JNIEnv*, jobject, jint targetHandle) {
+  int i = targetHandle;
   DLOG_IF(INFO, nfc_debug_enabled)
       << StringPrintf("%s: targetHandle = %d", __func__, targetHandle);
-  int i = targetHandle;
+#endif
+
   NfcTag& natTag = NfcTag::getInstance();
   int retCode = NFCSTATUS_SUCCESS;
 
@@ -706,7 +714,11 @@ static jint nativeNfcTag_doConnect(JNIEnv*, jobject, jint targetHandle) {
 
   sCurrentConnectedTargetType = natTag.mTechList[i];
   sCurrentConnectedTargetProtocol = natTag.mTechLibNfcTypes[i];
+#ifdef LINUX
+  sCurrentConnectedHandle = tagHandle;
+#else
   sCurrentConnectedHandle = targetHandle;
+#endif
 
   DLOG_IF(INFO, nfc_debug_enabled) << StringPrintf(
         "%s: TargetType=%d, TargetProtocol=%d", __func__,
@@ -1075,11 +1087,18 @@ TheEnd:
 ** Returns:         Status code.
 **
 *******************************************************************************/
+#ifdef LINUX
+int32_t nativeNfcTag_doHandleReconnect(UINT32 tagHandle) {
+  DLOG_IF(INFO, nfc_debug_enabled)
+      << StringPrintf("%s: targetHandle = %d", __func__, tagHandle);
+  return nativeNfcTag_doConnect(tagHandle);
+#else
 static jint nativeNfcTag_doHandleReconnect(JNIEnv* e, jobject o,
                                            jint targetHandle) {
   DLOG_IF(INFO, nfc_debug_enabled)
       << StringPrintf("%s: targetHandle = %d", __func__, targetHandle);
   return nativeNfcTag_doConnect(e, o, targetHandle);
+#endif
 }
 
 /*******************************************************************************
@@ -1135,8 +1154,6 @@ void nativeNfcTag_doTransceiveStatus(tNFA_STATUS status, uint8_t* buf,
   SyncEventGuard g(sTransceiveEvent);
   DLOG_IF(INFO, nfc_debug_enabled)
       << StringPrintf("%s: data len=%d", __func__, bufLen);
-
-  sPresCheckRequired = FALSE;
 
   if (sCurrentConnectedTargetProtocol == NFC_PROTOCOL_MIFARE && legacy_mfc_reader) {
     if (EXTNS_GetCallBackFlag() == FALSE) {

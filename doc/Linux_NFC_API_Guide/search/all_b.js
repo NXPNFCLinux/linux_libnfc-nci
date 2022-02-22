@@ -75,13 +75,14 @@ var searchData=
   ['nfcsnep_5fstopserver_111',['nfcSnep_stopServer',['../linux__nfc__api_8h.html#a8336fa8d2cd3f93c405732ecbba6b6ba',1,'linux_nfc_api.h']]],
   ['nfcsnepclientcallback_5ft_112',['nfcSnepClientCallback_t',['../structnfc_snep_client_callback__t.html',1,'']]],
   ['nfcsnepservercallback_5ft_113',['nfcSnepServerCallback_t',['../structnfc_snep_server_callback__t.html',1,'']]],
-  ['nfctag_5fformattag_114',['nfcTag_formatTag',['../linux__nfc__api_8h.html#ad192a7ce6c4a724ac546ad87734578e7',1,'linux_nfc_api.h']]],
-  ['nfctag_5fisformatable_115',['nfcTag_isFormatable',['../linux__nfc__api_8h.html#a97a43680747666daaf14f106e50fb13c',1,'linux_nfc_api.h']]],
-  ['nfctag_5fisndef_116',['nfcTag_isNdef',['../linux__nfc__api_8h.html#a0a7693b35d119c95aee0a4f9f36aa10d',1,'linux_nfc_api.h']]],
-  ['nfctag_5fmakereadonly_117',['nfcTag_makeReadOnly',['../linux__nfc__api_8h.html#a7a834699184d2125e207172684e84a7c',1,'linux_nfc_api.h']]],
-  ['nfctag_5freadndef_118',['nfcTag_readNdef',['../linux__nfc__api_8h.html#a618b5c17b1e7f8cae3104f6a73027298',1,'linux_nfc_api.h']]],
-  ['nfctag_5fswitchrf_119',['nfcTag_switchRF',['../linux__nfc__api_8h.html#a120efac7f3f63d89b2ee1d7bebd7ee83',1,'linux_nfc_api.h']]],
-  ['nfctag_5ftransceive_120',['nfcTag_transceive',['../linux__nfc__api_8h.html#a8791f76e26a7c425f85ce2601c55a447',1,'linux_nfc_api.h']]],
-  ['nfctag_5fwritendef_121',['nfcTag_writeNdef',['../linux__nfc__api_8h.html#a813e0adc4b7b751834d2603f2ac40787',1,'linux_nfc_api.h']]],
-  ['nfctagcallback_5ft_122',['nfcTagCallback_t',['../structnfc_tag_callback__t.html',1,'']]]
+  ['nfctag_5fdohandlereconnect_114',['nfcTag_doHandleReconnect',['../linux__nfc__api_8h.html#ab71ef6a24ac012c63369c75b02f65de6',1,'linux_nfc_api.h']]],
+  ['nfctag_5fformattag_115',['nfcTag_formatTag',['../linux__nfc__api_8h.html#ad192a7ce6c4a724ac546ad87734578e7',1,'linux_nfc_api.h']]],
+  ['nfctag_5fisformatable_116',['nfcTag_isFormatable',['../linux__nfc__api_8h.html#a97a43680747666daaf14f106e50fb13c',1,'linux_nfc_api.h']]],
+  ['nfctag_5fisndef_117',['nfcTag_isNdef',['../linux__nfc__api_8h.html#a0a7693b35d119c95aee0a4f9f36aa10d',1,'linux_nfc_api.h']]],
+  ['nfctag_5fmakereadonly_118',['nfcTag_makeReadOnly',['../linux__nfc__api_8h.html#a7a834699184d2125e207172684e84a7c',1,'linux_nfc_api.h']]],
+  ['nfctag_5freadndef_119',['nfcTag_readNdef',['../linux__nfc__api_8h.html#a618b5c17b1e7f8cae3104f6a73027298',1,'linux_nfc_api.h']]],
+  ['nfctag_5fswitchrf_120',['nfcTag_switchRF',['../linux__nfc__api_8h.html#a120efac7f3f63d89b2ee1d7bebd7ee83',1,'linux_nfc_api.h']]],
+  ['nfctag_5ftransceive_121',['nfcTag_transceive',['../linux__nfc__api_8h.html#a8791f76e26a7c425f85ce2601c55a447',1,'linux_nfc_api.h']]],
+  ['nfctag_5fwritendef_122',['nfcTag_writeNdef',['../linux__nfc__api_8h.html#a813e0adc4b7b751834d2603f2ac40787',1,'linux_nfc_api.h']]],
+  ['nfctagcallback_5ft_123',['nfcTagCallback_t',['../structnfc_tag_callback__t.html',1,'']]]
 ];

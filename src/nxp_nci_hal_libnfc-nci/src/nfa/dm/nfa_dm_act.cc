@@ -17,6 +17,27 @@
  ******************************************************************************/
 
 /******************************************************************************
+*
+* The original Work has been changed by NXP.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Copyright 2021 NXP
+* NOT A CONTRIBUTION
+*
+******************************************************************************/
+
+/******************************************************************************
  *
  *  This file contains the action functions for device manager state
  *  machine.
@@ -763,12 +784,11 @@ bool nfa_dm_act_deactivate(tNFA_DM_MSG* p_data) {
   DLOG_IF(INFO, nfc_debug_enabled) << __func__;
 
   /* Always allow deactivate to IDLE */
-  /* Do not allow deactivate to SLEEP for T1T,NFCDEP, ISO15693 */
+  /* Do not allow deactivate to SLEEP for T1T,NFCDEP */
   if (p_data->deactivate.sleep_mode == false ||
       (nfa_dm_cb.disc_cb.activated_protocol != NFA_PROTOCOL_T1T &&
        (nfa_dm_cb.disc_cb.activated_protocol != NFA_PROTOCOL_NFC_DEP ||
         appl_dta_mode_flag) &&
-       nfa_dm_cb.disc_cb.activated_protocol != NFA_PROTOCOL_T5T &&
        nfa_dm_cb.disc_cb.activated_protocol != NFC_PROTOCOL_KOVIO)) {
     deact_type = NFA_DEACTIVATE_TYPE_DISCOVERY;
     if (p_data->deactivate.sleep_mode) {
