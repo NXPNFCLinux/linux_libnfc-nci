@@ -54,7 +54,7 @@ extern "C" {
 #endif
 
 #ifndef nfcManager_selectNextTag
-#define nfcManager_selectNextTag selectNextTagIfExists
+#define nfcManager_selectNextTag selectNextTag
 #endif
 
 #ifndef nfcManager_getNumTags
