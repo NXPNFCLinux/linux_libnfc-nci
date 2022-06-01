@@ -17,9 +17,9 @@
  ******************************************************************************/
 /******************************************************************************
  *
- *  The original Work has been changed by NXP Semiconductors.
+ *  The original Work has been changed by NXP.
  *
- *  Copyright (C) 2020 NXP Semiconductors
+ *  Copyright 2020,2022 NXP
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -547,6 +547,29 @@ void NfcAdaptation::Initialize() {
           << StringPrintf("%s: Overriding NFA_EE_MAX_EE_SUPPORTED to use %d",
                           func, nfa_ee_max_ee_cfg);
     }
+    if (NfcConfig::hasKey(NAME_NFA_PROPRIETARY_CFG)) {
+      std::vector<uint8_t> p_config =
+        NfcConfig::getBytes(NAME_NFA_PROPRIETARY_CFG);
+
+    if (p_config.size() > 0)
+      nfa_proprietary_cfg.pro_protocol_18092_active = p_config[0];
+    if (p_config.size() > 1)
+      nfa_proprietary_cfg.pro_protocol_b_prime = p_config[1];
+    if (p_config.size() > 2)
+      nfa_proprietary_cfg.pro_protocol_dual = p_config[2];
+    if (p_config.size() > 3)
+      nfa_proprietary_cfg.pro_protocol_15693 = p_config[3];
+    if (p_config.size() > 4)
+      nfa_proprietary_cfg.pro_protocol_kovio = p_config[4];
+    if (p_config.size() > 5) nfa_proprietary_cfg.pro_protocol_mfc = p_config[5];
+    if (p_config.size() > 6)
+      nfa_proprietary_cfg.pro_discovery_kovio_poll = p_config[6];
+    if (p_config.size() > 7)
+      nfa_proprietary_cfg.pro_discovery_b_prime_poll = p_config[7];
+    if (p_config.size() > 8)
+      nfa_proprietary_cfg.pro_discovery_b_prime_listen = p_config[8];
+  }
+
 
     if ( !GetStrValue ( NAME_NFA_STORAGE, nfc_nci_store, sizeof ( nfc_nci_store ) ) )
     {
