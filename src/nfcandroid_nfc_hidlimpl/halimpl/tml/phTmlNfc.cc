@@ -627,6 +627,9 @@ void phTmlNfc_CleanUp(void) {
 *******************************************************************************/
 NFCSTATUS phTmlNfc_Shutdown(void) {
   NFCSTATUS wShutdownStatus = NFCSTATUS_SUCCESS;
+  //  Timeout (in seconds) when joining threads. must be greater than NCI_CMD_RSP_TIMEOUT_MS defined in the kernel driver
+  #define NXP_THREAD_JOIN_TO  3;  
+  struct timespec ts;
 
   /* Check whether TML is Initialized */
   if (NULL != gpphTmlNfc_Context) {
@@ -643,11 +646,23 @@ NFCSTATUS phTmlNfc_Shutdown(void) {
     sem_post(&gpphTmlNfc_Context->postMsgSemaphore);
     usleep(1000);
     pthread_mutex_destroy(&gpphTmlNfc_Context->readInfoUpdateMutex);
-    if (0 != pthread_join(gpphTmlNfc_Context->readerThread, (void**)NULL)) {
-      NXPLOG_TML_E("Fail to kill reader thread!");
+    //Try to stop the reader thread... if not possible then cancel it
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += NXP_THREAD_JOIN_TO;
+    if (0 != pthread_timedjoin_np(gpphTmlNfc_Context->readerThread, (void**)NULL, &ts) ) {
+      pthread_cancel(gpphTmlNfc_Context->readerThread);
+      if (0 != pthread_join(gpphTmlNfc_Context->readerThread, (void**)NULL)) {
+        NXPLOG_TML_E("Fail to kill reader thread!");
+      }
     }
-    if (0 != pthread_join(gpphTmlNfc_Context->writerThread, (void**)NULL)) {
-      NXPLOG_TML_E("Fail to kill writer thread!");
+    // Try to stop the writer thread... if not possible then cancel it
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += NXP_THREAD_JOIN_TO;    
+    if (0 != pthread_timedjoin_np(gpphTmlNfc_Context->writerThread, (void**)NULL, &ts) ) {
+      pthread_cancel(gpphTmlNfc_Context->writerThread);
+      if (0 != pthread_join(gpphTmlNfc_Context->writerThread, (void**)NULL)) {
+        NXPLOG_TML_E("Fail to kill writer thread!");
+      }
     }
     NXPLOG_TML_D("bThreadDone == 0");
 
