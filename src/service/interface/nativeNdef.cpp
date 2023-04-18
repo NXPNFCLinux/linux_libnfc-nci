@@ -374,13 +374,13 @@ end_and_return:
 
 INT32 nativeNdef_readText( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outText, UINT32 textLen)
 {
-    int langCodeLen;
-    UINT8 *payload;
-    UINT32 payloadLength;
-    UINT8 ndef_tnf;
-    UINT8 *ndef_type;
-    UINT8 ndef_typeLength;
-    nfc_friendly_type_t friendly_type;
+    int langCodeLen = 0;
+    UINT8 *payload = NULL;
+    UINT32 payloadLength = 0;
+    UINT8 ndef_tnf = 0;
+    UINT8 *ndef_type = NULL;
+    UINT8 ndef_typeLength = 0;
+    nfc_friendly_type_t friendly_type = NDEF_FRIENDLY_TYPE_OTHER;
 
     ndef_type = NDEF_RecGetType((UINT8*)ndefBuff, &ndef_tnf, &ndef_typeLength);
     friendly_type = nativeNdef_getFriendlyType(ndef_tnf, ndef_type, ndef_typeLength);
@@ -404,13 +404,13 @@ INT32 nativeNdef_readText( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outText, U
 
 INT32 nativeNdef_readLang( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outLang, UINT32 LangLen)
 {
-    int langCodeLen;
-    UINT8 *payload;
-    uint32_t payloadLength;
-    UINT8 ndef_tnf;
-    UINT8 *ndef_type;
-    UINT8 ndef_typeLength;
-    nfc_friendly_type_t friendly_type;
+    int langCodeLen = 0;
+    UINT8 *payload = NULL;
+    uint32_t payloadLength = 0;
+    UINT8 ndef_tnf = 0;
+    UINT8 *ndef_type = NULL;
+    UINT8 ndef_typeLength = 0;
+    nfc_friendly_type_t friendly_type = NDEF_FRIENDLY_TYPE_OTHER;
 
     ndef_type = NDEF_RecGetType((UINT8*)ndefBuff, &ndef_tnf, &ndef_typeLength);
     friendly_type = nativeNdef_getFriendlyType(ndef_tnf, ndef_type, ndef_typeLength);
@@ -434,14 +434,14 @@ INT32 nativeNdef_readLang( UINT8*ndefBuff, UINT32 ndefBuffLen, char * outLang, U
 
 INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT32 urlBufferLen)
 {
-    UINT32 prefixIdx;
-    UINT32 prefixLen;
-    UINT8 *payload;
-    UINT32 payloadLength;
-    UINT8 ndef_tnf;
-    UINT8 *ndef_type;
-    UINT8 ndef_typeLength;
-    nfc_friendly_type_t friendly_type;
+    UINT32 prefixIdx = 0;
+    UINT32 prefixLen = 0;
+    UINT8 *payload = NULL;
+    UINT32 payloadLength = 0;
+    UINT8 ndef_tnf = 0;
+    UINT8 *ndef_type = NULL;
+    UINT8 ndef_typeLength = 0;
+    nfc_friendly_type_t friendly_type = NDEF_FRIENDLY_TYPE_OTHER;
 
     ndef_type = NDEF_RecGetType((UINT8*)ndefBuff, &ndef_tnf, &ndef_typeLength);
     friendly_type = nativeNdef_getFriendlyType(ndef_tnf, ndef_type, ndef_typeLength);
@@ -475,18 +475,18 @@ INT32 nativeNdef_readUrl(UINT8*ndefBuff, UINT32 ndefBuffLen, char * outUrl, UINT
 
 INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request_t *hrInfo)
 {
-    UINT8 *p_hr_record;
-    UINT8 *p_hr_payload;
+    UINT8 *p_hr_record = NULL;
+    UINT8 *p_hr_payload = NULL;
     UINT32 hr_payload_len = 0;
-    UINT8 *p_record;
-    UINT8 *p_payload;
-    UINT32 record_payload_len;
-    UINT8 *p_id;
-    UINT8 id_len;
+    UINT8 *p_record = NULL;
+    UINT8 *p_payload = NULL;
+    UINT32 record_payload_len = 0;
+    UINT8 *p_id = NULL;
+    UINT8 id_len = 0;
     UINT8   version = 0;
-    UINT32 index;
-    UINT8 len;
-    UINT8 type;
+    UINT32 index = 0;
+    UINT8 len = 0;
+    UINT8 type = 0xFF;
 
     (void)ndefBuffLen;
     if (hrInfo == NULL)
@@ -662,20 +662,20 @@ INT32 nativeNdef_readHr(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_request
 
 INT32 nativeNdef_readHs(UINT8*ndefBuff, UINT32 ndefBuffLen, nfc_handover_select_t *hsInfo)
 {
-    UINT8 *p_hs_record;
-    UINT8 *p_hs_payload;
+    UINT8 *p_hs_record = NULL;
+    UINT8 *p_hs_payload = NULL;
     UINT32 hs_payload_len = 0;
-    UINT8 *p_record;
-    UINT8 *p_payload;
-    UINT32 record_payload_len;
-    UINT8 *p_id;
-    UINT8 id_len;
+    UINT8 *p_record = NULL;
+    UINT8 *p_payload = NULL;
+    UINT32 record_payload_len = 0;
+    UINT8 *p_id = NULL;
+    UINT8 id_len = 0;
     UINT8  version = 0;
-    UINT32 index;
-    UINT8 bt_len;
-    UINT8 bt_type;
-    UINT16 wifi_len;
-    UINT16 wifi_type;
+    UINT32 index = 0;
+    UINT8 bt_len = 0;
+    UINT8 bt_type = 0xFF;
+    UINT16 wifi_len = 0;
+    UINT16 wifi_type = 0xFFFF;
     UINT8 status = -1;
 
     (void)ndefBuffLen;
