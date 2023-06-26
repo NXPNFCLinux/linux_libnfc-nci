@@ -16,3 +16,4 @@ Release version
 Possible problems, known errors and restrictions of R1.1:
 ---------------------------------------------------------
 - LLCP1.3 support requires OpenSSL Cryptography and SSL/TLS Toolkit (version 1.0.1j or later)
+- To install on 64bit OS, apply patch
