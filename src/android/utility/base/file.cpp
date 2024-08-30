@@ -67,7 +67,9 @@ bool ReadFileToString(const std::string& path, std::string* content, bool follow
   if (fd == -1) {
     return false;
   }
-  return ReadFdToString(fd, content);
+  bool ret = ReadFdToString(fd, content);
+  close(fd);
+  return ret;
 }
 bool WriteStringToFd(const std::string& content, int fd) {
   const char* p = content.data();
