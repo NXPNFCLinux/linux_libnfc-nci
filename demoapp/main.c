@@ -87,26 +87,23 @@ unsigned short T4T_NdefRecord_size = 0;
 typedef void T4T_NDEF_EMU_Callback_t (unsigned char*, unsigned short);
 static T4T_NDEF_EMU_state_t eT4T_NDEF_EMU_State = Ready;
 static T4T_NDEF_EMU_Callback_t *pT4T_NDEF_EMU_PushCb = NULL;
+void PrintNDEFContent(nfc_tag_info_t*, ndef_info_t*, unsigned char*, unsigned int);
 void help(int mode);
 int InitEnv();
 int LookForTag(char** args, int args_len, char* tag, char** data, int format);
 /********************************** HCE **********************************/
 static void T4T_NDEF_EMU_FillRsp (unsigned char *pRsp, unsigned short offset, unsigned char length)
 {
-    if (offset == 0)
+    unsigned int i;
+    for (i = 0; i < length; i++)
     {
-        pRsp[0] = (T4T_NdefRecord_size & 0xFF00) >> 8;
-        pRsp[1] = (T4T_NdefRecord_size & 0x00FF);
-        memcpy(&pRsp[2], &pT4T_NdefRecord[0], length-2);
-    }
-    else if (offset == 1)
-    {
-        pRsp[0] = (T4T_NdefRecord_size & 0x00FF);
-        memcpy(&pRsp[1], &pT4T_NdefRecord[0], length-1);
-    }
-    else
-    {
-        memcpy(pRsp, &pT4T_NdefRecord[offset-2], length);
+        unsigned int pos = offset + i;
+        if (pos == 0)
+            pRsp[i] = T4T_NdefRecord_size >> 8;
+        else if (pos == 1)
+            pRsp[i] = T4T_NdefRecord_size & 0xff;
+        else
+            pRsp[i] = pT4T_NdefRecord[pos - 2];
     }
     /* Did we reached the end of NDEF record ?*/
     if ((offset + length) >= (T4T_NdefRecord_size + 2))
@@ -128,13 +125,15 @@ void T4T_NDEF_EMU_Reset(void)
 void T4T_NDEF_EMU_Next(unsigned char *pCmd, unsigned short Cmd_size, unsigned char *pRsp, unsigned short *pRsp_size)
 {
     unsigned char eStatus = 0x00;
-    if (!memcmp(pCmd, T4T_NDEF_EMU_APP_Select, sizeof(T4T_NDEF_EMU_APP_Select)))
+    if (Cmd_size >= sizeof(T4T_NDEF_EMU_APP_Select) &&
+        !memcmp(pCmd, T4T_NDEF_EMU_APP_Select, sizeof(T4T_NDEF_EMU_APP_Select)))
     {
         *pRsp_size = 0;
         eStatus = 0x01;
         eT4T_NDEF_EMU_State = NDEF_Application_Selected;
     }
-    else if (!memcmp(pCmd, T4T_NDEF_EMU_CC_Select, sizeof(T4T_NDEF_EMU_CC_Select)))
+    else if (Cmd_size >= sizeof(T4T_NDEF_EMU_CC_Select) &&
+        !memcmp(pCmd, T4T_NDEF_EMU_CC_Select, sizeof(T4T_NDEF_EMU_CC_Select)))
     {
         if(eT4T_NDEF_EMU_State == NDEF_Application_Selected)
         {
@@ -143,13 +142,14 @@ void T4T_NDEF_EMU_Next(unsigned char *pCmd, unsigned short Cmd_size, unsigned ch
             eT4T_NDEF_EMU_State = CC_Selected;
         }
     }
-    else if (!memcmp(pCmd, T4T_NDEF_EMU_NDEF_Select, sizeof(T4T_NDEF_EMU_NDEF_Select)))
+    else if (Cmd_size >= sizeof(T4T_NDEF_EMU_NDEF_Select) &&
+        !memcmp(pCmd, T4T_NDEF_EMU_NDEF_Select, sizeof(T4T_NDEF_EMU_NDEF_Select)))
     {
         *pRsp_size = 0;
         eStatus = 0x01;
         eT4T_NDEF_EMU_State = NDEF_Selected;
     }
-    else if (!memcmp(pCmd, T4T_NDEF_EMU_Read, sizeof(T4T_NDEF_EMU_Read)))
+    else if (Cmd_size >= 5 && !memcmp(pCmd, T4T_NDEF_EMU_Read, sizeof(T4T_NDEF_EMU_Read)))
     {
         if(eT4T_NDEF_EMU_State == CC_Selected)
         {
@@ -161,7 +161,8 @@ void T4T_NDEF_EMU_Next(unsigned char *pCmd, unsigned short Cmd_size, unsigned ch
         {
             unsigned short offset = (pCmd[2] << 8) + pCmd[3];
             unsigned char length = pCmd[4];
-            if(length <= (T4T_NdefRecord_size + offset + 2))
+            if(length && offset <= T4T_NdefRecord_size + 2U &&
+               length <= T4T_NdefRecord_size + 2U - offset)
             {
                 T4T_NDEF_EMU_FillRsp(pRsp, offset, length);
                 *pRsp_size = length;
@@ -1159,7 +1160,7 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
     unsigned char MifareWriteCmd[] = {0xA0U,  /*block*/ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55};
     unsigned char MifareResp[255];
 
-    unsigned char HCEReponse[255];
+    unsigned char HCEReponse[257];
     short unsigned int HCEResponseLen = 0x00;
     int tag_count=0;
     int num_tags = 0;
